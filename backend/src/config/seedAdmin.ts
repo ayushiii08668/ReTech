@@ -4,60 +4,65 @@ import logger from '../utils/logger.js';
 
 export async function seedAdminUser(): Promise<void> {
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@retech.in';
+    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@retech.in').toLowerCase();
     const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@ReTech2026!';
 
-    // 1. Seed Administrator
-    const existingAdmin = await User.findOne({ role: 'ADMIN' });
-    if (!existingAdmin) {
-      const salt = await bcrypt.genSalt(12);
-      const passwordHash = await bcrypt.hash(adminPassword, salt);
+    // 1. Seed or Update Administrator
+    const adminSalt = await bcrypt.genSalt(12);
+    const adminPasswordHash = await bcrypt.hash(adminPassword, adminSalt);
 
-      await User.create({
-        fullName: 'ReTech Platform Administrator',
-        email: adminEmail.toLowerCase(),
-        phone: '+91 98765 43210',
-        passwordHash,
-        role: 'ADMIN',
-        accountStatus: 'ACTIVE',
-        address: {
-          street: '100 Sustainability Boulevard',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          pinCode: '560001',
+    const adminUser = await User.findOneAndUpdate(
+      { email: adminEmail },
+      {
+        $set: {
+          fullName: 'ReTech Platform Administrator',
+          email: adminEmail,
+          phone: '+91 98765 43210',
+          passwordHash: adminPasswordHash,
+          role: 'ADMIN',
+          accountStatus: 'ACTIVE',
+          address: {
+            street: '100 Sustainability Boulevard',
+            city: 'Bengaluru',
+            state: 'Karnataka',
+            pinCode: '560001',
+          },
         },
-      });
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    logger.info(`✨ Admin user verified & provisioned: ${adminUser.email} (role: ${adminUser.role})`);
 
-      logger.info(`✨ Admin user successfully provisioned: ${adminEmail}`);
-    }
-
-    // 2. Seed Default Demo Customer for 1-click evaluation
+    // 2. Seed or Update Default Demo Customer
     const demoCustomerEmail = 'customer@retech.in';
     const demoCustomerPassword = 'Customer@2026!';
-    const existingCustomer = await User.findOne({ email: demoCustomerEmail });
-    if (!existingCustomer) {
-      const salt = await bcrypt.genSalt(12);
-      const passwordHash = await bcrypt.hash(demoCustomerPassword, salt);
+    const customerSalt = await bcrypt.genSalt(12);
+    const customerPasswordHash = await bcrypt.hash(demoCustomerPassword, customerSalt);
 
-      await User.create({
-        fullName: 'Ayush Sharma (Demo Customer)',
-        email: demoCustomerEmail,
-        phone: '+91 98123 45678',
-        passwordHash,
-        role: 'CUSTOMER',
-        accountStatus: 'ACTIVE',
-        address: {
-          street: 'Flat 402, Green Glen Layout, Bellandur',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          pinCode: '560103',
+    const customerUser = await User.findOneAndUpdate(
+      { email: demoCustomerEmail },
+      {
+        $set: {
+          fullName: 'Ayush Sharma (Demo Customer)',
+          email: demoCustomerEmail,
+          phone: '+91 98123 45678',
+          passwordHash: customerPasswordHash,
+          role: 'CUSTOMER',
+          accountStatus: 'ACTIVE',
+          address: {
+            street: 'Flat 402, Green Glen Layout, Bellandur',
+            city: 'Bengaluru',
+            state: 'Karnataka',
+            pinCode: '560103',
+          },
         },
-      });
-
-      logger.info(`✨ Demo Customer successfully provisioned: ${demoCustomerEmail}`);
-    }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    logger.info(`✨ Demo Customer verified & provisioned: ${customerUser.email} (role: ${customerUser.role})`);
   } catch (error) {
     logger.error(`Failed to auto-seed initial users: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
+
 
