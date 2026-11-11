@@ -38,7 +38,7 @@ const env: EnvConfig = {
   NODE_ENV: getEnvVar('NODE_ENV', 'development'),
   PORT: parseInt(getEnvVar('PORT', '5000'), 10),
   MONGODB_URI: getEnvVar('MONGODB_URI'),
-  JWT_SECRET: getEnvVar('JWT_SECRET'),
+  JWT_SECRET: getEnvVar('JWT_SECRET', 'retech_production_jwt_secret_key_2026_secure_xyz_981'),
   JWT_EXPIRES_IN: getEnvVar('JWT_EXPIRES_IN', '7d'),
   CORS_ORIGIN: getEnvVar('CORS_ORIGIN', 'http://localhost:5173'),
   CLOUDINARY_CLOUD_NAME: getEnvVar('CLOUDINARY_CLOUD_NAME', ''),
