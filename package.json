@@ -1,0 +1,28 @@
+{
+  "name": "retech-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ReTech – Smart E-Waste Collection, Data Sanitization & Circular Economy Platform",
+  "scripts": {
+    "dev:backend": "cd backend && pnpm run dev",
+    "dev:frontend": "cd frontend && pnpm run dev",
+    "build:backend": "cd backend && pnpm run build",
+    "build:frontend": "cd frontend && pnpm run build",
+    "build": "pnpm run build:backend && pnpm run build:frontend",
+    "test:e2e": "cd backend && npx tsx test_e2e_journey.ts",
+    "test:phase4": "cd backend && npx tsx test_phase4_runner.ts",
+    "test:phase3": "cd backend && npx tsx test_phase3_runner.ts",
+    "test:agent": "cd sanitization-agent && python -m pytest -v tests/test_agent.py",
+    "test": "pnpm run test:e2e && pnpm run test:phase4 && pnpm run test:agent"
+  },
+  "keywords": [
+    "e-waste",
+    "data-sanitization",
+    "nist-800-88",
+    "circular-economy",
+    "refurbished-marketplace",
+    "recycling"
+  ],
+  "author": "ReTech Engineering Team",
+  "license": "UNLICENSED"
+}

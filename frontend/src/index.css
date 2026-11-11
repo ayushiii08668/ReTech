@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  /* Color palette — Ivory/Background */
+  --color-ivory: #FAF7F2;
+  --color-ivory-secondary: #F5F0E8;
+  --color-white-card: #FFFFFF;
+
+  /* Terracotta (Primary accent) */
+  --color-terracotta: #C75B3A;
+  --color-terracotta-dark: #B5482A;
+  --color-terracotta-light: #D4724F;
+
+  /* Copper (Secondary accent) */
+  --color-copper: #B87333;
+  --color-copper-dark: #A66328;
+  --color-copper-light: #CC8844;
+
+  /* Warm Brown (Text) */
+  --color-warm-brown: #2C1810;
+  --color-warm-brown-body: #4A3428;
+  --color-warm-brown-muted: #6B5445;
+  --color-warm-brown-placeholder: #8B7355;
+
+  /* Taupe (Borders/Surfaces) */
+  --color-taupe: #D4C5B2;
+  --color-taupe-surface: #E8DDD0;
+  --color-taupe-dark: #C4B49E;
+
+  /* Semantic */
+  --color-success: #4A7C59;
+  --color-warning: #C49A3C;
+  --color-error: #B84233;
+
+  /* Dark surfaces */
+  --color-dark-brown: #1A0F0A;
+  --color-dark-surface: #3D2B20;
+
+  /* Typography */
+  --font-manrope: "Manrope", sans-serif;
+  --font-dm-sans: "DM Sans", sans-serif;
+
+  /* Shadows */
+  --shadow-warm-sm: 0 1px 3px rgba(44, 24, 16, 0.06);
+  --shadow-warm: 0 2px 8px rgba(44, 24, 16, 0.08);
+  --shadow-warm-md: 0 4px 16px rgba(44, 24, 16, 0.1);
+  --shadow-warm-lg: 0 8px 32px rgba(44, 24, 16, 0.12);
+}
+
+/* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ivory);
+  font-family: var(--font-dm-sans);
+  color: var(--color-warm-brown-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-manrope);
+  color: var(--color-warm-brown);
+}
+
+/* Selection color */
+::selection {
+  background-color: #C75B3A30;
+  color: var(--color-warm-brown);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-ivory);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-taupe);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-taupe-dark);
+}
