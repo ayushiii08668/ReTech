@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(receivedUser)
         localStorage.setItem("retech_token", receivedToken)
         localStorage.setItem("retech_user", JSON.stringify(receivedUser))
-        return { success: true }
+        return { success: true, user: receivedUser }
       }
       return { success: false, message: res.data.message || "Login failed" }
     } catch (err: any) {
@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(receivedUser)
         localStorage.setItem("retech_token", receivedToken)
         localStorage.setItem("retech_user", JSON.stringify(receivedUser))
-        return { success: true }
+        return { success: true, user: receivedUser }
       }
       return { success: false, message: res.data.message || "Registration failed" }
     } catch (err: any) {

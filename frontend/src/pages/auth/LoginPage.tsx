@@ -29,7 +29,8 @@ export default function LoginPage() {
     setLoading(false)
 
     if (res.success) {
-      navigate(from, { replace: true })
+      const destination = (res as any).user?.role === "ADMIN" ? "/admin/dashboard" : from
+      navigate(destination, { replace: true })
     } else {
       setError(res.message || "Invalid email or password")
     }
@@ -81,12 +82,6 @@ export default function LoginPage() {
           <div className="rounded-3xl border border-[#DDD1C3] bg-[#FFFDF8] p-8 shadow-warm-lg sm:p-10">
             {/* Header */}
             <div className="mb-8">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-[#B78B68]/30 bg-[#B78B68]/10 px-3 py-1 mb-3">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#B78B68]" />
-                <span className="font-dm-sans text-[11px] font-600 tracking-wider text-[#B78B68] uppercase">
-                  Customer Portal
-                </span>
-              </div>
               <h1 className="font-manrope text-2xl font-800 tracking-tight text-[#47372E] sm:text-3xl">
                 Welcome back.
               </h1>
