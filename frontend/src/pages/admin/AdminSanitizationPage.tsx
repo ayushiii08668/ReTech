@@ -24,6 +24,7 @@ import {
   Sparkles,
   Server,
   Layers,
+  Trash2,
 } from "lucide-react"
 import {
   sanitizationService,
@@ -198,6 +199,22 @@ export default function AdminSanitizationPage() {
         loadData(true)
       } catch (e) {
         console.error("Failed to revoke agent:", e)
+      }
+    }
+  }
+
+  // Delete agent permanently
+  const handleDeleteAgent = async (agentId: string) => {
+    if (
+      confirm(
+        `Are you sure you want to permanently delete agent node ${agentId}? This will remove it from the system.`
+      )
+    ) {
+      try {
+        await sanitizationService.deleteAgent(agentId)
+        loadData(true)
+      } catch (e: any) {
+        alert(e?.response?.data?.message || "Failed to delete agent node.")
       }
     }
   }
@@ -680,6 +697,15 @@ export default function AdminSanitizationPage() {
                             OFFLINE
                           </span>
                         )}
+
+                        <button
+                          onClick={() => handleDeleteAgent(agent.agentId)}
+                          title="Delete Agent Node"
+                          className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50/80 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:text-rose-900 transition-colors shadow-xs"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Delete</span>
+                        </button>
                       </div>
                     </div>
 
@@ -746,14 +772,23 @@ export default function AdminSanitizationPage() {
                       <span className="text-[11px] font-mono text-[#75665D]">
                         Agent v{agent.agentVersion}
                       </span>
-                      {agent.status !== "REVOKED" && (
+                      <div className="flex items-center gap-3">
+                        {agent.status !== "REVOKED" && (
+                          <button
+                            onClick={() => handleRevokeAgent(agent.agentId)}
+                            className="font-dm-sans text-xs font-700 text-stone-500 hover:text-stone-800 hover:underline"
+                          >
+                            Revoke Access
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleRevokeAgent(agent.agentId)}
-                          className="font-dm-sans text-xs font-700 text-rose-700 hover:underline"
+                          onClick={() => handleDeleteAgent(agent.agentId)}
+                          className="flex items-center gap-1 font-dm-sans text-xs font-700 text-rose-600 hover:text-rose-800 hover:underline"
                         >
-                          Revoke Access
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Delete Node</span>
                         </button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )

@@ -8,6 +8,7 @@ import {
   getAgents,
   generatePairingCode,
   revokeAgent,
+  deleteAgent,
 } from '../controllers/sanitization.controller.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 
@@ -26,6 +27,8 @@ router.patch('/jobs/:id/cancel', cancelSanitizationJob);
 router.get('/agents', getAgents);
 router.post('/agents/pairing-code', generatePairingCode);
 router.post('/agents/:id/revoke', revokeAgent);
+router.delete('/agents/:id', deleteAgent);
+router.post('/agents/:id/delete', deleteAgent);
 
 export default router;
 

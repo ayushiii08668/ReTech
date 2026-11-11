@@ -440,3 +440,35 @@ export const revokeAgent = async (
     next(error);
   }
 };
+
+/**
+ * Permanently delete / remove an agent node from the system
+ */
+export const deleteAgent = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    let query: any = { agentId: id };
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { $or: [{ _id: id }, { agentId: id }] };
+    }
+
+    const agent = await Agent.findOneAndDelete(query);
+
+    if (!agent) {
+      return next(new AppError(`Agent ${id} not found`, 404));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Agent ${agent.agentId} (${agent.name}) was permanently deleted.`,
+      data: { agentId: agent.agentId },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -161,6 +161,11 @@ export const sanitizationService = {
     return res.data.data
   },
 
+  deleteAgent: async (id: string) => {
+    const res = await api.delete(`/admin/sanitization/agents/${id}`)
+    return res.data.data
+  },
+
   // Customer endpoints
   getCustomerDeviceSanitization: async (deviceId: string) => {
     const res = await api.get(`/customer/devices/${deviceId}/sanitization`)
