@@ -1,7 +1,7 @@
 import React, { useState } from "react"
 import { Link, useNavigate, useLocation } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Mail, Lock, ArrowRight, AlertCircle, ShieldCheck } from "lucide-react"
+import { Mail, Lock, ArrowRight, AlertCircle, ShieldCheck, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { ForgotPasswordModal } from "./ForgotPasswordModal"
 
@@ -12,6 +12,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +25,7 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
 
-    const res = await login(email, password, rememberMe)
+    const res = await login(email.trim(), password, rememberMe)
     setLoading(false)
 
     if (res.success) {
@@ -36,6 +37,7 @@ export default function LoginPage() {
 
   // Helper to prefill demo customer
   const fillDemoCustomer = () => {
+    setError(null)
     setEmail("customer@retech.in")
     setPassword("Customer@2026!")
   }
@@ -136,13 +138,21 @@ export default function LoginPage() {
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#75665D]" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-xl border border-[#DDD1C3] bg-white py-2.5 pl-10 pr-4 font-dm-sans text-sm text-[#47372E] outline-none transition-colors focus:border-[#C66D4E] focus:ring-1 focus:ring-[#C66D4E]"
+                    className="w-full rounded-xl border border-[#DDD1C3] bg-white py-2.5 pl-10 pr-11 font-dm-sans text-sm text-[#47372E] outline-none transition-colors focus:border-[#C66D4E] focus:ring-1 focus:ring-[#C66D4E]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#75665D] hover:text-[#47372E]"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
