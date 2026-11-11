@@ -102,18 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message }
     }
   }
-        setToken(receivedToken)
-        setUser(receivedUser)
-        localStorage.setItem("retech_token", receivedToken)
-        localStorage.setItem("retech_user", JSON.stringify(receivedUser))
-        return { success: true }
-      }
-      return { success: false, message: res.data.message || "Registration failed" }
-    } catch (err: any) {
-      const message = err.response?.data?.message || err.response?.data?.error || "Registration failed"
-      return { success: false, message }
-    }
-  }
 
   const logout = () => {
     try {
