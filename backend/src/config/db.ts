@@ -1,6 +1,16 @@
 import mongoose from 'mongoose';
+import dns from 'node:dns';
 import env from './env.js';
 import logger from '../utils/logger.js';
+
+// Ensure reliable DNS resolution for MongoDB Atlas SRV connection strings on Windows
+if (env.MONGODB_URI.startsWith('mongodb+srv://')) {
+  try {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  } catch (err) {
+    // Non-fatal if custom DNS cannot be set
+  }
+}
 
 /**
  * Connect to MongoDB using the URI from environment configuration.
@@ -9,9 +19,9 @@ import logger from '../utils/logger.js';
 const connectDB = async (): Promise<void> => {
   try {
     const conn = await mongoose.connect(env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 3000,
+      serverSelectionTimeoutMS: 10000,
     });
-    logger.info(`MongoDB connected: ${conn.connection.host}`);
+    logger.info(`MongoDB connected: ${conn.connection.host} (DB: ${conn.connection.name})`);
   } catch (error) {
     if (error instanceof Error) {
       logger.error(`MongoDB connection error: ${error.message}`);
