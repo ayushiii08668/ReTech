@@ -28,8 +28,8 @@ const adminNavItems = [
   { label: "Device Inventory", href: "/admin/devices", icon: Boxes },
   { label: "Sanitization Ops", href: "/admin/sanitization", icon: Microscope, badge: "NIST 800-88" },
   { label: "Certificates Ledger", href: "/admin/certificates", icon: Award, badge: "PDF" },
-  { label: "Resale Marketplace", href: "/admin/marketplace", icon: ShoppingBag },
-  // Refurbishment Ops and Recycler Transfers hidden as requested
+  // Refurbishment, Recycler Transfers, and dependent Resale Marketplace hidden
+  // { label: "Resale Marketplace", href: "/admin/marketplace", icon: ShoppingBag },
   // { label: "Refurbishment Ops", href: "/admin/refurbishment", icon: Wrench },
   // { label: "Recycler Transfers", href: "/admin/recycling", icon: Recycle },
   { label: "System Settings", href: "/admin/settings", icon: Settings },
