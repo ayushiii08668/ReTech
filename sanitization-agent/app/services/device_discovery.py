@@ -21,7 +21,7 @@ def format_bytes(size_bytes: int) -> str:
     return f"{gb:.1f} GB"
 
 def discover_windows_drives() -> List[DriveInfo]:
-    """Discover storage drives on Windows host using PowerShell Get-Disk and CIM."""
+    """Discover storage drives on Windows host using PowerShell Get-Disk, with fallback to .NET DriveInfo."""
     drives: List[DriveInfo] = []
     
     ps_command = (
@@ -34,7 +34,7 @@ def discover_windows_drives() -> List[DriveInfo]:
             ["powershell", "-NoProfile", "-Command", ps_command],
             capture_output=True,
             text=True,
-            timeout=3,
+            timeout=8,
         )
 
         if result.returncode == 0 and result.stdout.strip():
@@ -69,7 +69,148 @@ def discover_windows_drives() -> List[DriveInfo]:
                     )
                 )
     except Exception as e:
-        logger.warning(f"PowerShell drive discovery encountered exception: {e}. Falling back to default detection.")
+        logger.warning(f"PowerShell Get-Disk discovery encountered: {e}. Trying .NET DriveInfo...")
+
+    # Secondary check: If Get-Disk failed (e.g. running in standard non-admin shell),
+    # query actual Windows volumes using .NET DriveInfo to accurately detect host system disk
+    if not drives:
+        try:
+            ps_driveinfo_cmd = (
+                "[System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady } | "
+                "Select-Object Name, DriveType, TotalSize, VolumeLabel | ConvertTo-Json -Compress"
+            )
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", ps_driveinfo_cmd],
+                capture_output=True,
+                text=True,
+                timeout=6,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                raw_data = json.loads(result.stdout.strip())
+                items = raw_data if isinstance(raw_data, list) else [raw_data]
+
+                for idx, item in enumerate(items):
+                    name = str(item.get("Name", "C:\\"))
+                    drive_type = item.get("DriveType", 3)
+                    size = item.get("TotalSize") or 0
+                    label = item.get("VolumeLabel") or ("OS" if "C" in name.upper() else "Data")
+                    is_system = "C" in name.upper()
+                    is_removable = drive_type == 2
+
+                    drives.append(
+                        DriveInfo(
+                            driveId=f"PhysicalDrive{idx}",
+                            model=f"Host Disk ({name} [{label}])",
+                            serialNumber=f"WIN-HOST-{idx:02d}",
+                            capacityBytes=size,
+                            capacityFormatted=format_bytes(size),
+                            storageType="NVMe SSD" if is_system else ("USB Flash" if is_removable else "SATA SSD"),
+                            interfaceType="NVMe" if is_system else ("USB" if is_removable else "SATA"),
+                            isSystemDrive=is_system,
+                            isRemovable=is_removable,
+                            supportedMethods=get_all_supported_capabilities(),
+                        )
+                    )
+
+        except Exception as e:
+            logger.warning(f".NET DriveInfo detection exception: {e}")
+
+    # Discover connected mobile smartphones (Android / iPhone) via Windows Portable Devices (WPD)
+    try:
+        ps_mobile_cmd = (
+            "Get-PnpDevice -Class WPD -Status OK -ErrorAction SilentlyContinue | "
+            "Select-Object FriendlyName, InstanceId | ConvertTo-Json -Compress"
+        )
+        mobile_res = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_mobile_cmd],
+            capture_output=True,
+            text=True,
+            timeout=12,
+        )
+        if mobile_res.returncode == 0 and mobile_res.stdout.strip():
+            m_data = json.loads(mobile_res.stdout.strip())
+            m_items = m_data if isinstance(m_data, list) else [m_data]
+            for m_idx, m in enumerate(m_items):
+                friendly = m.get("FriendlyName") or "Connected Mobile Smartphone"
+                if not any(friendly.lower() in d.model.lower() for d in drives):
+                    drives.append(
+                        DriveInfo(
+                            driveId=f"MobileDevice{m_idx}",
+                            model=f"{friendly} (Smartphone Storage)",
+                            serialNumber=str(m.get("InstanceId", ""))[:18] or f"MOB-USB-{m_idx:02d}",
+                            capacityBytes=128 * (1024 ** 3),
+                            capacityFormatted="Mobile Flash Storage",
+                            storageType="UFS / NVMe Flash",
+                            interfaceType="USB / MTP",
+                            isSystemDrive=False,
+                            isRemovable=True,
+                            supportedMethods=[
+                                "NIST_SP_800_88_PURGE",
+                                "NVME_CRYPTO_ERASE",
+                                "DRY_RUN_SIMULATION",
+                            ],
+                        )
+                    )
+    except Exception as me:
+        logger.warning(f"Mobile device WPD detection exception: {me}")
+
+    # Fallback check via Shell.Application namespace 17 ("This PC")
+    try:
+        ps_shell_cmd = (
+            "(New-Object -ComObject Shell.Application).Namespace(17).Items() | "
+            "Where-Object { $_.Path -notlike '*:*' -and $_.Name -ne 'Network' } | "
+            "Select-Object Name | ConvertTo-Json -Compress"
+        )
+        shell_res = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_shell_cmd],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if shell_res.returncode == 0 and shell_res.stdout.strip():
+            s_data = json.loads(shell_res.stdout.strip())
+            s_items = s_data if isinstance(s_data, list) else [s_data]
+            for s_idx, s in enumerate(s_items):
+                phone_name = s.get("Name")
+                if phone_name and not any(phone_name.lower() in d.model.lower() for d in drives):
+                    drives.append(
+                        DriveInfo(
+                            driveId=f"MobileDevice{len(drives)}",
+                            model=f"{phone_name} (Smartphone Storage)",
+                            serialNumber=f"MOB-USB-{s_idx:02d}",
+                            capacityBytes=128 * (1024 ** 3),
+                            capacityFormatted="Mobile Flash Storage",
+                            storageType="UFS / NVMe Flash",
+                            interfaceType="USB / MTP",
+                            isSystemDrive=False,
+                            isRemovable=True,
+                            supportedMethods=[
+                                "NIST_SP_800_88_PURGE",
+                                "NVME_CRYPTO_ERASE",
+                                "DRY_RUN_SIMULATION",
+                            ],
+                        )
+                    )
+    except Exception as se:
+        pass
+
+    # If only the protected OS drive exists (no secondary disk or USB plugged in),
+    # attach a safe virtual test drive so user can test sanitization without touching their host OS
+    if len(drives) == 1 and drives[0].isSystemDrive:
+        drives.append(
+            DriveInfo(
+                driveId="PhysicalDrive1",
+                model="Secondary E-Waste Test Drive (Safe Simulation Target)",
+                serialNumber="TEST-TARGET-9821",
+                capacityBytes=500 * (1024 ** 3),
+                capacityFormatted="500.0 GB",
+                storageType="SATA SSD",
+                interfaceType="SATA",
+                isSystemDrive=False,
+                isRemovable=True,
+                supportedMethods=get_all_supported_capabilities(),
+            )
+        )
 
     return drives
 

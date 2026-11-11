@@ -3,8 +3,10 @@ Outbound Job Polling & Execution Loop.
 Communicates outbound to backend, claims pending tasks, executes sanitization, and posts cryptographic results.
 """
 import time
+import json
 import platform
 import httpx
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from ..config import load_config
 from ..services.authentication import get_auth_headers
@@ -68,8 +70,9 @@ def post_job_event(job_id: str, status: str, progress: int, logs: List[Dict[str,
         "logs": logs or [],
     }
     try:
+        clean_payload = json.loads(json.dumps(payload, default=str))
         with httpx.Client(timeout=10.0) as client:
-            client.post(url, headers=headers, json=payload)
+            client.post(url, headers=headers, json=clean_payload)
     except Exception as e:
         logger.error(f"Error posting job event for {job_id}: {e}")
 
@@ -90,8 +93,9 @@ def post_job_results(
         "failureReason": failure_reason,
     }
     try:
+        clean_payload = json.loads(json.dumps(payload, default=str))
         with httpx.Client(timeout=15.0) as client:
-            res = client.post(url, headers=headers, json=payload)
+            res = client.post(url, headers=headers, json=clean_payload)
             if res.status_code == 200:
                 logger.info(f"Sanitization result posted successfully for job {job_id} [Status: {status}]")
                 return True
@@ -170,8 +174,8 @@ def poll_and_process_jobs() -> int:
                 ])
 
                 final_status = "VERIFIED_SUCCESSFUL" if success else "OPERATION_FAILED"
-                verification_dict = verification.model_dump() if verification else None
-                formatted_logs = [l.model_dump() for l in logs]
+                verification_dict = verification.model_dump(mode="json") if verification else None
+                formatted_logs = [l.model_dump(mode="json") for l in logs]
 
                 post_job_results(
                     job_id=job_id,

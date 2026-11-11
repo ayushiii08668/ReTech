@@ -100,33 +100,38 @@ export const agentHeartbeat = async (
 
     const { hostname, platform, agentVersion, supportedCapabilities, discoveredDrives } = req.body;
 
-    // Refresh agent document from DB to persist changes
-    const dbAgent = await Agent.findById(agent._id);
-    if (!dbAgent) {
-      return next(new AppError('Agent not found', 404));
-    }
+    const updateObj: Record<string, any> = {
+      status: 'ONLINE',
+      lastSeenAt: new Date(),
+    };
 
-    if (hostname) dbAgent.hostname = hostname;
-    if (platform) dbAgent.platform = platform;
-    if (agentVersion) dbAgent.agentVersion = agentVersion;
+    if (hostname) updateObj.hostname = hostname;
+    if (platform) updateObj.platform = platform;
+    if (agentVersion) updateObj.agentVersion = agentVersion;
     if (supportedCapabilities && Array.isArray(supportedCapabilities)) {
-      dbAgent.supportedCapabilities = supportedCapabilities;
+      updateObj.supportedCapabilities = supportedCapabilities;
     }
     if (discoveredDrives && Array.isArray(discoveredDrives)) {
-      dbAgent.discoveredDrives = discoveredDrives;
+      updateObj.discoveredDrives = discoveredDrives;
     }
 
-    dbAgent.status = 'ONLINE';
-    dbAgent.lastSeenAt = new Date();
-    await dbAgent.save();
+    const updatedAgent = await Agent.findByIdAndUpdate(
+      agent._id,
+      { $set: updateObj },
+      { new: true, runValidators: false }
+    );
+
+    if (!updatedAgent) {
+      return next(new AppError('Agent not found', 404));
+    }
 
     res.status(200).json({
       success: true,
       message: 'Heartbeat acknowledged',
       data: {
-        agentId: dbAgent.agentId,
-        status: dbAgent.status,
-        timestamp: dbAgent.lastSeenAt,
+        agentId: updatedAgent.agentId,
+        status: updatedAgent.status,
+        timestamp: updatedAgent.lastSeenAt,
       },
     });
   } catch (error) {
