@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (err.code === "ERR_NETWORK" || !err.response) {
         return {
           success: false,
-          message: "Cannot connect to ReTech backend server. Please verify the backend is running on http://localhost:5000 and MongoDB is active.",
+          message: "Cannot connect to ReTech backend server. Please check your network connection, CORS configuration, or backend status.",
         }
       }
       const message = err.response?.data?.message || err.response?.data?.error || "Invalid credentials"
@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (err.code === "ERR_NETWORK" || !err.response) {
         return {
           success: false,
-          message: "Cannot connect to ReTech backend server. Please verify the backend is running on http://localhost:5000 and MongoDB is active.",
+          message: "Cannot connect to ReTech backend server. Please check your network connection, CORS configuration, or backend status.",
         }
       }
       const message = err.response?.data?.message || err.response?.data?.error || "Registration failed. Please check your information."

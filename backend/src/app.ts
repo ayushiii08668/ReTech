@@ -29,6 +29,8 @@ app.use(
       if (!origin) return callback(null, true);
       if (
         allowedOrigins.includes(origin) ||
+        allowedOrigins.includes('*') ||
+        origin.endsWith('.vercel.app') ||
         (env.NODE_ENV === 'development' && origin.includes('localhost')) ||
         (env.NODE_ENV === 'development' && origin.includes('127.0.0.1'))
       ) {
