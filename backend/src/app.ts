@@ -86,6 +86,18 @@ app.use(morgan(morganFormat));
 
 // --------------- Routes ---------------
 
+// Root welcome handler for web browsers
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    success: true,
+    service: 'ReTech Platform API',
+    status: 'online',
+    version: '1.0.0',
+    documentation: 'https://github.com/ayushiii08668/ReTech',
+    healthCheck: '/health',
+  });
+});
+
 // Root health probe for load balancers & container orchestrators
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });

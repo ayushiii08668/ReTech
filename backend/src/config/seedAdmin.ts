@@ -5,7 +5,7 @@ import logger from '../utils/logger.js';
 export async function seedAdminUser(): Promise<void> {
   try {
     const adminEmail = (process.env.ADMIN_EMAIL || 'admin@retech.in').toLowerCase();
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@ReTech2026!';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@2026!';
 
     // 1. Seed or Update Administrator
     const adminSalt = await bcrypt.genSalt(12);
