@@ -26,8 +26,7 @@ const navItems = [
   { label: "Request Collection", href: "/dashboard/submit", icon: PlusCircle },
   { label: "Track Requests", href: "/dashboard/track", icon: Truck },
   { label: "Reports & Certificates", href: "/dashboard/reports", icon: FileCheck2, badge: "NIST 800-88" },
-  // Refurbished Store hidden as requested
-  // { label: "Refurbished Store", href: "/dashboard/marketplace", icon: ShoppingBag, badge: "Certified" },
+  { label: "Resale Marketplace", href: "/dashboard/marketplace", icon: ShoppingBag, badge: "Certified" },
   { label: "My Profile", href: "/dashboard/profile", icon: User },
   { label: "Help & Support", href: "/dashboard/support", icon: HelpCircle },
 ]
