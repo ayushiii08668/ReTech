@@ -64,6 +64,14 @@ const errorHandler = (
       error = handleDuplicateFieldsDB(anyErr);
     } else if (anyErr.name === 'ValidationError') {
       error = handleValidationErrorDB(anyErr);
+    } else if (
+      anyErr.name === 'MongoServerSelectionError' ||
+      anyErr.name === 'MongooseServerSelectionError' ||
+      (anyErr.name === 'MongooseError' && anyErr.message?.includes('buffering timed out')) ||
+      anyErr.message?.includes('ECONNREFUSED') ||
+      anyErr.message?.includes('connect EACCES')
+    ) {
+      error = new AppError('Database connection unavailable. Please start the local MongoDB service (net start MongoDB).', 503);
     } else {
       // Unknown / programming error
       error = new AppError(err.message || 'Internal Server Error', 500);

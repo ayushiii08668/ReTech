@@ -68,6 +68,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return { success: false, message: res.data.message || "Login failed" }
     } catch (err: any) {
+      if (err.code === "ERR_NETWORK" || !err.response) {
+        return {
+          success: false,
+          message: "Cannot connect to ReTech backend server. Please verify the backend is running on http://localhost:5000 and MongoDB is active.",
+        }
+      }
       const message = err.response?.data?.message || err.response?.data?.error || "Invalid credentials"
       return { success: false, message }
     }
@@ -78,6 +84,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await api.post("/auth/register", data)
       if (res.data.success) {
         const { token: receivedToken, user: receivedUser } = res.data
+        setToken(receivedToken)
+        setUser(receivedUser)
+        localStorage.setItem("retech_token", receivedToken)
+        localStorage.setItem("retech_user", JSON.stringify(receivedUser))
+        return { success: true }
+      }
+      return { success: false, message: res.data.message || "Registration failed" }
+    } catch (err: any) {
+      if (err.code === "ERR_NETWORK" || !err.response) {
+        return {
+          success: false,
+          message: "Cannot connect to ReTech backend server. Please verify the backend is running on http://localhost:5000 and MongoDB is active.",
+        }
+      }
+      const message = err.response?.data?.message || err.response?.data?.error || "Registration failed. Please check your information."
+      return { success: false, message }
+    }
+  }
         setToken(receivedToken)
         setUser(receivedUser)
         localStorage.setItem("retech_token", receivedToken)
