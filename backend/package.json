@@ -4,6 +4,7 @@
   "description": "ReTech – Smart E-Waste Collection and Data Sanitization Platform API",
   "main": "dist/server.js",
   "type": "module",
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",

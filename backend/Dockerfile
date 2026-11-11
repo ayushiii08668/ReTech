@@ -3,10 +3,11 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm directly via npm (reliable and works everywhere)
+RUN npm install -g pnpm@latest
 
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install
+RUN pnpm install --frozen-lockfile=false
 
 COPY . .
 RUN pnpm run build
@@ -17,16 +18,15 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=5000
+ENV PORT=10000
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm install -g pnpm@latest
 
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --prod
+RUN pnpm install --prod --frozen-lockfile=false
 
 COPY --from=builder /app/dist ./dist
 
-EXPOSE 5000
+EXPOSE 10000
 
 CMD ["node", "dist/server.js"]
-
