@@ -19,6 +19,7 @@ from app.utils.logger import logger
 def main():
     parser = argparse.ArgumentParser(description="ReTech Data Sanitization Agent")
     parser.add_argument("--pair", type=str, help="Pair agent using single-use pairing code (e.g. PAIR-ABCD-1234)")
+    parser.add_argument("--server", "--url", dest="server", type=str, default=None, help="Target backend API server URL (e.g. https://retech-3x97.onrender.com)")
     parser.add_argument("--name", type=str, default=None, help="Custom name for this agent node")
     parser.add_argument("--sync", action="store_true", help="Perform immediate one-time sync with backend")
     parser.add_argument("--drives", action="store_true", help="Inspect and display host storage drives")
@@ -30,7 +31,7 @@ def main():
 
     if args.pair:
         logger.info(f"Initiating agent pairing using code: {args.pair}")
-        success = pair_with_backend(args.pair, custom_name=args.name)
+        success = pair_with_backend(args.pair, custom_name=args.name, server_url=args.server)
         if success:
             logger.info("Agent paired successfully! Ready to process jobs.")
             sys.exit(0)

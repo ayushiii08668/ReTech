@@ -19,9 +19,15 @@ def get_auth_headers() -> Dict[str, str]:
         headers["x-agent-key"] = config.apiKey
     return headers
 
-def pair_with_backend(pairing_code: str, custom_name: Optional[str] = None) -> bool:
+def pair_with_backend(pairing_code: str, custom_name: Optional[str] = None, server_url: Optional[str] = None) -> bool:
     """Pairs the local agent with the ReTech backend using an Admin-generated pairing code."""
     config = load_config()
+    if server_url:
+        cleaned_url = server_url.rstrip("/")
+        if not cleaned_url.endswith("/api/v1") and not cleaned_url.endswith("/api"):
+            cleaned_url = f"{cleaned_url}/api/v1"
+        config.backendUrl = cleaned_url
+
     backend_url = config.backendUrl.rstrip("/")
     pair_endpoint = f"{backend_url}/agent/pair"
 

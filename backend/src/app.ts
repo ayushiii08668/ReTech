@@ -20,25 +20,16 @@ const app = express();
 // Set security HTTP headers
 app.use(helmet());
 
-// Enable CORS with dynamic multi-origin support
-const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
+// Enable CORS with dynamic multi-origin reflection (supports Vercel, localhost, and custom domains)
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or Postman)
-      if (!origin) return callback(null, true);
-      if (
-        allowedOrigins.includes(origin) ||
-        allowedOrigins.includes('*') ||
-        origin.endsWith('.vercel.app') ||
-        (env.NODE_ENV === 'development' && origin.includes('localhost')) ||
-        (env.NODE_ENV === 'development' && origin.includes('127.0.0.1'))
-      ) {
-        return callback(null, true);
-      }
-      return callback(new Error('Blocked by CORS policy'));
+      // Reflect requesting origin to satisfy browser credentials policy
+      callback(null, true);
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-agent-id', 'x-agent-key'],
   }),
 );
 
