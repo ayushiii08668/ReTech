@@ -514,3 +514,40 @@ export const getAdminEnquiries = async (
   }
 };
 
+/**
+ * Admin: Delete / remove a marketplace listing
+ */
+export const deleteMarketplaceListing = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { listingId } = req.params;
+
+    let query: any = { listingId };
+    if (listingId.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { $or: [{ _id: listingId }, { listingId }] };
+    }
+
+    const listing = await MarketplaceListing.findOneAndDelete(query);
+    if (!listing) {
+      return next(new AppError('Marketplace listing not found.', 404));
+    }
+
+    // Revert device status back to SANITIZED if it was listed
+    await Device.findByIdAndUpdate(listing.deviceId, {
+      status: 'SANITIZED',
+      marketplaceListingId: undefined,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Marketplace listing ${listing.listingId} removed successfully.`,
+      data: { listingId: listing.listingId },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

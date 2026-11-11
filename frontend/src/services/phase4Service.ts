@@ -310,6 +310,11 @@ export const phase4Service = {
     return res.data.data as MarketplaceListing
   },
 
+  deleteListing: async (id: string) => {
+    const res = await api.delete(`/marketplace/admin/listings/${id}`)
+    return res.data.data
+  },
+
   getAdminEnquiries: async () => {
     const res = await api.get("/marketplace/admin/enquiries")
     return res.data.data as MarketplaceEnquiry[]

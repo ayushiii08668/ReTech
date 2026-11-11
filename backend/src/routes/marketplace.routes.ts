@@ -8,6 +8,7 @@ import {
   updateMarketplaceListing,
   markListingSold,
   getAdminEnquiries,
+  deleteMarketplaceListing,
 } from '../controllers/marketplace.controller.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 
@@ -25,6 +26,8 @@ router.get('/admin/listings', protect, restrictTo('ADMIN'), getAdminListings);
 router.post('/admin/listings', protect, restrictTo('ADMIN'), createMarketplaceListing);
 router.patch('/admin/listings/:listingId', protect, restrictTo('ADMIN'), updateMarketplaceListing);
 router.patch('/admin/listings/:listingId/sold', protect, restrictTo('ADMIN'), markListingSold);
+router.delete('/admin/listings/:listingId', protect, restrictTo('ADMIN'), deleteMarketplaceListing);
+router.post('/admin/listings/:listingId/delete', protect, restrictTo('ADMIN'), deleteMarketplaceListing);
 router.get('/admin/enquiries', protect, restrictTo('ADMIN'), getAdminEnquiries);
 
 export default router;

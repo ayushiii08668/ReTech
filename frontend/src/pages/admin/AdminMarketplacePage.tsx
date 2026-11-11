@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { useSearchParams } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ShoppingBag,
@@ -18,6 +19,7 @@ import {
   RefreshCw,
   AlertTriangle,
   Layers,
+  Trash2,
 } from "lucide-react"
 import {
   phase4Service,
@@ -28,7 +30,12 @@ import api from "@/services/api"
 import { IDevice } from "@/types"
 
 export default function AdminMarketplacePage() {
-  const [activeTab, setActiveTab] = useState<"listings" | "create" | "enquiries">("listings")
+  const [searchParams] = useSearchParams()
+  const targetDeviceFromQuery = searchParams.get("deviceId")
+
+  const [activeTab, setActiveTab] = useState<"listings" | "create" | "enquiries">(
+    targetDeviceFromQuery ? "create" : "listings"
+  )
   const [listings, setListings] = useState<MarketplaceListing[]>([])
   const [enquiries, setEnquiries] = useState<MarketplaceEnquiry[]>([])
   const [eligibleDevices, setEligibleDevices] = useState<IDevice[]>([])
@@ -37,7 +44,7 @@ export default function AdminMarketplacePage() {
   const [statusFilter, setStatusFilter] = useState("ALL")
 
   // Create Listing Form State
-  const [selectedDeviceId, setSelectedDeviceId] = useState("")
+  const [selectedDeviceId, setSelectedDeviceId] = useState(targetDeviceFromQuery || "")
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [price, setPrice] = useState("")
@@ -77,6 +84,22 @@ export default function AdminMarketplacePage() {
             d.classification !== "D"
         )
         setEligibleDevices(eligible)
+
+        // If target device was provided in URL query, pre-populate listing form
+        if (targetDeviceFromQuery) {
+          const matched = eligible.find(
+            (d: any) => d._id === targetDeviceFromQuery || d.deviceId === targetDeviceFromQuery
+          )
+          if (matched) {
+            setSelectedDeviceId(matched._id)
+            setTitle(`ReTech Certified Refurbished ${matched.brand} ${matched.model}`)
+            setDescription(
+              `Pre-owned ${matched.brand} ${matched.model} inspected and certified by ReTech. Completely data-sanitized in compliance with NIST SP 800-88.`
+            )
+            setStorage(`${matched.storageCapacity || "512 GB"} ${matched.storageType || "SSD"}`)
+            setActiveTab("create")
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to load marketplace admin data:", err)
@@ -88,6 +111,22 @@ export default function AdminMarketplacePage() {
   useEffect(() => {
     loadData()
   }, [search, statusFilter])
+
+  // Delete listing permanently
+  const handleDeleteListing = async (listingId: string, itemTitle: string) => {
+    if (
+      confirm(
+        `Are you sure you want to delete listing "${itemTitle}" (${listingId})? It will be removed from the marketplace and returned to sanitized inventory.`
+      )
+    ) {
+      try {
+        await phase4Service.deleteListing(listingId)
+        loadData()
+      } catch (err: any) {
+        alert(err?.response?.data?.message || "Failed to delete listing.")
+      }
+    }
+  }
 
   const handleCreateListing = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -348,17 +387,26 @@ export default function AdminMarketplacePage() {
                         </td>
 
                         <td className="py-4 px-5 text-right">
-                          {l.availability === "AVAILABLE" && (
+                          <div className="flex items-center justify-end gap-2">
+                            {l.availability === "AVAILABLE" && (
+                              <button
+                                onClick={() => {
+                                  setSellingListing(l)
+                                  setSoldPrice(l.price.toString())
+                                }}
+                                className="rounded-xl bg-[#C66D4E] px-3 py-1 font-dm-sans text-xs font-700 text-white hover:bg-[#B55D3E] shadow-warm-sm"
+                              >
+                                Mark Sold
+                              </button>
+                            )}
                             <button
-                              onClick={() => {
-                                setSellingListing(l)
-                                setSoldPrice(l.price.toString())
-                              }}
-                              className="rounded-xl bg-[#C66D4E] px-3 py-1 font-dm-sans text-xs font-700 text-white hover:bg-[#B55D3E] shadow-warm-sm"
+                              onClick={() => handleDeleteListing(l.listingId, l.title)}
+                              title="Delete Listing from Marketplace"
+                              className="rounded-xl border border-rose-200 bg-rose-50 p-1.5 text-rose-600 hover:bg-rose-100 hover:text-rose-800 transition-colors shadow-xs"
                             >
-                              Mark Sold
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     ))

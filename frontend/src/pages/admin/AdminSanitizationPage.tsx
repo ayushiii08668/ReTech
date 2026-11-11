@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ShieldCheck,
@@ -25,6 +26,7 @@ import {
   Server,
   Layers,
   Trash2,
+  ShoppingBag,
 } from "lucide-react"
 import {
   sanitizationService,
@@ -36,6 +38,7 @@ import api from "@/services/api"
 import { IDevice } from "@/types"
 
 export default function AdminSanitizationPage() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<"ledger" | "agents" | "initiate">("ledger")
   const [stats, setStats] = useState<SanitizationStats | null>(null)
   const [jobs, setJobs] = useState<SanitizationJob[]>([])
@@ -585,13 +588,28 @@ export default function AdminSanitizationPage() {
                         </td>
 
                         <td className="py-4 px-5 text-right">
-                          <button
-                            onClick={() => setSelectedJob(job)}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-[#DDD1C3] bg-[#FFFDF8] px-3 py-1.5 font-dm-sans text-xs font-700 text-[#47372E] shadow-warm-sm hover:bg-[#F5F0E7] transition-all"
-                          >
-                            <Terminal className="h-3.5 w-3.5 text-[#C66D4E]" />
-                            Audit &amp; Logs
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            {job.status === "VERIFIED_SUCCESSFUL" && (
+                              <button
+                                onClick={() => {
+                                  const devId = typeof job.deviceId === "object" ? (job.deviceId as any)?._id : job.deviceId
+                                  navigate(`/admin/marketplace?deviceId=${devId}`)
+                                }}
+                                title="Approve this sanitized device and create a resale listing"
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 font-dm-sans text-xs font-700 text-emerald-800 shadow-warm-sm hover:bg-emerald-100 transition-all"
+                              >
+                                <ShoppingBag className="h-3.5 w-3.5 text-emerald-700" />
+                                <span>Approve for Resale</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setSelectedJob(job)}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-[#DDD1C3] bg-[#FFFDF8] px-3 py-1.5 font-dm-sans text-xs font-700 text-[#47372E] shadow-warm-sm hover:bg-[#F5F0E7] transition-all"
+                            >
+                              <Terminal className="h-3.5 w-3.5 text-[#C66D4E]" />
+                              Audit &amp; Logs
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -1085,6 +1103,34 @@ export default function AdminSanitizationPage() {
                     <div className="rounded-xl bg-[#2D231E] p-3 text-white font-mono text-[11px]">
                       <span className="text-emerald-400 block mb-1">SHA-256 Cryptographic Verification Hash:</span>
                       <span className="break-all select-all">{selectedJob.verificationResult.sha256VerificationHash}</span>
+                    </div>
+
+                    {/* Resale Marketplace Decision Prompt */}
+                    <div className="rounded-2xl border border-emerald-300 bg-white/90 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-warm-xs">
+                      <div>
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                          <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                          NIST SP 800-88 Sanitization Verified &bull; Second-Life Eligible
+                        </span>
+                        <h4 className="mt-1 font-manrope text-sm font-800 text-[#47372E]">
+                          Would you like to approve this device for the Resale Marketplace?
+                        </h4>
+                        <p className="mt-0.5 font-dm-sans text-xs text-[#75665D]">
+                          This device meets all certified data privacy guidelines and can now be safely offered to second-life buyers.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const devId = typeof selectedJob.deviceId === "object" ? (selectedJob.deviceId as any)?._id : selectedJob.deviceId
+                          setSelectedJob(null)
+                          navigate(`/admin/marketplace?deviceId=${devId}`)
+                        }}
+                        className="shrink-0 flex items-center gap-2 rounded-2xl bg-[#C66D4E] px-4 py-2.5 font-dm-sans text-xs font-700 text-white shadow-warm-sm hover:bg-[#B55D3E] transition-all"
+                      >
+                        <ShoppingBag className="h-4 w-4" />
+                        <span>Approve &amp; List for Resale &rarr;</span>
+                      </button>
                     </div>
                   </div>
                 )}
