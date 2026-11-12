@@ -10,7 +10,7 @@ export default function HelpSupportPage() {
     },
     {
       q: "What types of electronic devices can I submit for collection?",
-      a: "We accept laptops, desktops, tablets, smartphones, monitors, network routers, printers, hard disk drives, SSDs, and bulk peripherals.",
+      a: "We accept data-bearing electronics including laptops, desktops, tablets, smartphones, monitors, internal/external hard drives, SSDs, enterprise servers, and storage media for certified NIST SP 800-88 sanitization.",
     },
     {
       q: "Can I cancel a pickup request after booking?",

@@ -4,12 +4,10 @@ import {
   Monitor,
   Smartphone,
   Tablet,
-  Printer,
-  Router,
   HardDrive,
-  Cable,
-  CircuitBoard,
   ScreenShare,
+  Server,
+  Database,
 } from "lucide-react"
 
 const categories = [
@@ -39,29 +37,19 @@ const categories = [
     icon: ScreenShare,
   },
   {
-    name: "Printers",
-    description: "Inkjet, laser, and multifunction printers",
-    icon: Printer,
-  },
-  {
-    name: "Routers",
-    description: "Wi-Fi routers, modems, and network switches",
-    icon: Router,
-  },
-  {
     name: "Storage Devices",
-    description: "Hard drives, SSDs, USB drives, and NAS",
+    description: "SATA drives, NVMe SSDs, external hard disks",
     icon: HardDrive,
   },
   {
-    name: "Chargers & Cables",
-    description: "Power adapters, cables, and peripherals",
-    icon: Cable,
+    name: "Servers & NAS",
+    description: "Enterprise rackmount servers and network storage",
+    icon: Server,
   },
   {
-    name: "Other Electronics",
-    description: "PCBs, components, and miscellaneous devices",
-    icon: CircuitBoard,
+    name: "Other Data-Bearing Media",
+    description: "USB flash drives, SD cards, and backup drives",
+    icon: Database,
   },
 ]
 

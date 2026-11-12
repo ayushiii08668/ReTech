@@ -117,10 +117,8 @@ export default function MyDevicesPage() {
             <option value="Tablet">Tablets</option>
             <option value="Monitor">Monitors</option>
             <option value="Storage">HDD / SSD</option>
-            <option value="Printer">Printers</option>
-            <option value="Router">Routers</option>
-            <option value="Cables">Cables &amp; Chargers</option>
-            <option value="Other">Other Electronics</option>
+            <option value="Server">Servers &amp; NAS</option>
+            <option value="Other">Other Data-Bearing Devices</option>
           </select>
         </div>
 
