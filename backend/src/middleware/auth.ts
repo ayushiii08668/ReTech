@@ -21,6 +21,8 @@ export const protect = async (
       req.headers.authorization.startsWith('Bearer ')
     ) {
       token = req.headers.authorization.split(' ')[1];
+    } else if (req.query && typeof req.query.token === 'string') {
+      token = req.query.token;
     }
 
     if (!token) {

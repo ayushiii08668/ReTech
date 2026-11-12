@@ -40,7 +40,20 @@ export default function AdminCertificatesPage() {
 
   // Certificate Issuance State
   const [issuingDeviceId, setIssuingDeviceId] = useState<string | null>(null)
+  const [downloadingCertId, setDownloadingCertId] = useState<string | null>(null)
   const [actionMsg, setActionMsg] = useState<string | null>(null)
+
+  const handleDownloadPdf = async (certificateId: string, certNumber?: string) => {
+    try {
+      setDownloadingCertId(certificateId)
+      await phase4Service.downloadCertificatePdf(certificateId, certNumber)
+    } catch (err: any) {
+      console.error("Failed to download PDF:", err)
+      alert(err?.response?.data?.message || "Failed to download certificate PDF.")
+    } finally {
+      setDownloadingCertId(null)
+    }
+  }
 
   const loadCertificates = async () => {
     setLoading(true)
@@ -304,15 +317,18 @@ export default function AdminCertificatesPage() {
 
                           <td className="py-4 px-5 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <a
-                                href={cert.pdfUrl || `/api/v1/certificates/${cert._id}/download`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="rounded-xl border border-[#DDD1C3] bg-[#FFFDF8] p-1.5 text-[#47372E] hover:bg-[#F5F0E7]"
+                              <button
+                                onClick={() => handleDownloadPdf(cert._id, cert.certificateNumber)}
+                                disabled={downloadingCertId === cert._id}
+                                className="rounded-xl border border-[#DDD1C3] bg-[#FFFDF8] p-1.5 text-[#47372E] hover:bg-[#F5F0E7] disabled:opacity-50 cursor-pointer"
                                 title="Download Official PDF"
                               >
-                                <Download className="h-3.5 w-3.5" />
-                              </a>
+                                {downloadingCertId === cert._id ? (
+                                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#C66D4E] border-t-transparent" />
+                                ) : (
+                                  <Download className="h-3.5 w-3.5" />
+                                )}
+                              </button>
 
                               <a
                                 href={`/verify-certificate/${cert.verificationId}`}

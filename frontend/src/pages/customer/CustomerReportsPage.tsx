@@ -25,6 +25,19 @@ export default function CustomerReportsPage() {
   const [reports, setReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [timelineDeviceId, setTimelineDeviceId] = useState<string | null>(null)
+  const [downloadingCertId, setDownloadingCertId] = useState<string | null>(null)
+
+  const handleDownloadCertificate = async (certificateId: string, certNumber?: string) => {
+    try {
+      setDownloadingCertId(certificateId)
+      await phase4Service.downloadCertificatePdf(certificateId, certNumber)
+    } catch (err: any) {
+      console.error("Failed to download certificate:", err)
+      alert(err?.response?.data?.message || "Failed to download certificate PDF. Please try again.")
+    } finally {
+      setDownloadingCertId(null)
+    }
+  }
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -127,15 +140,20 @@ export default function CustomerReportsPage() {
                     </button>
 
                     {cert && (
-                      <a
-                        href={cert.downloadUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#C66D4E] px-3.5 py-1.5 font-dm-sans text-xs font-700 text-white hover:bg-[#B55D3E] shadow-warm-sm transition-all"
+                      <button
+                        onClick={() =>
+                          handleDownloadCertificate(cert._id || cert.certificateNumber, cert.certificateNumber)
+                        }
+                        disabled={downloadingCertId === (cert._id || cert.certificateNumber)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#C66D4E] px-3.5 py-1.5 font-dm-sans text-xs font-700 text-white hover:bg-[#B55D3E] shadow-warm-sm transition-all disabled:opacity-60 cursor-pointer"
                       >
-                        <Download className="h-3.5 w-3.5" />
+                        {downloadingCertId === (cert._id || cert.certificateNumber) ? (
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5" />
+                        )}
                         Download Certificate (PDF)
-                      </a>
+                      </button>
                     )}
                   </div>
                 </div>

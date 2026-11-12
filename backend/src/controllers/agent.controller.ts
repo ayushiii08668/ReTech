@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import Agent from '../models/Agent.js';
 import SanitizationJob, { SanitizationJobStatus } from '../models/SanitizationJob.js';
 import Device from '../models/Device.js';
+import SanitizationCertificate from '../models/SanitizationCertificate.js';
 import AppError from '../utils/AppError.js';
 import { AgentRequest } from '../middleware/agentAuth.js';
 
@@ -371,11 +372,52 @@ export const reportJobResults = async (
 
     await job.save();
 
-    // Cross-update associated device status in ReTech inventory
+    // Cross-update associated device status in ReTech inventory and ensure official certificate
     if (status === 'VERIFIED_SUCCESSFUL') {
-      await Device.findByIdAndUpdate(job.deviceId, {
-        status: 'SANITIZED',
-      });
+      const device = await Device.findById(job.deviceId);
+      if (device) {
+        const certNumber =
+          job.verificationResult?.certificateId ||
+          `CERT-${new Date().getFullYear()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+
+        let cert = await SanitizationCertificate.findOne({
+          $or: [{ sanitizationJobId: job._id }, { certificateNumber: certNumber }],
+        });
+
+        if (!cert) {
+          const verificationId = crypto.randomBytes(16).toString('hex');
+          const evidenceRef =
+            job.verificationResult?.sha256VerificationHash ||
+            crypto.createHash('sha256').update(job.jobId).digest('hex');
+
+          cert = await SanitizationCertificate.create({
+            certificateNumber: certNumber,
+            verificationId,
+            deviceId: device._id,
+            retechDeviceId: device.deviceId,
+            customerId: device.customerId,
+            sanitizationJobId: job._id,
+            sanitizationJobCode: job.jobId,
+            sanitizationMethod: job.selectedMethod || 'NIST_SP_800_88_CLEAR',
+            standardReference:
+              job.sanitizationStandard || 'NIST SP 800-88 Rev. 1 Guidelines for Media Sanitization',
+            operationCompletedAt: job.completedAt || new Date(),
+            verifiedAt: job.verificationResult?.verificationTimestamp || new Date(),
+            issuedAt: new Date(),
+            issuedBy: job.assignedAgentId || device.customerId,
+            issuedByName: 'ReTech Automated Sanitization Agent',
+            verificationOutcome: 'VERIFIED_SUCCESSFUL',
+            evidenceReference: evidenceRef,
+            entropyScore: job.verificationResult?.entropyScore ?? 0.0,
+            sectorsSampled: job.verificationResult?.sectorsSampled ?? 1024,
+            status: 'ACTIVE',
+          });
+        }
+
+        device.status = 'SANITIZED';
+        device.certificateId = cert.certificateNumber;
+        await device.save();
+      }
     }
 
     res.status(200).json({

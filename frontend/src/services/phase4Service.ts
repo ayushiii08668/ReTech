@@ -260,6 +260,21 @@ export const phase4Service = {
     return res.data.data
   },
 
+  downloadCertificatePdf: async (certificateId: string, certNumber?: string) => {
+    const res = await api.get(`/certificates/${certificateId}/download`, {
+      responseType: "blob",
+    })
+    const blob = new Blob([res.data], { type: "application/pdf" })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `ReTech-Certificate-${certNumber || certificateId}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  },
+
   // --- MARKETPLACE ---
   getPublicListings: async (params?: {
     search?: string
