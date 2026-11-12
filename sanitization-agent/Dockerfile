@@ -7,12 +7,20 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Install dependencies first (cached layer)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy application source code
+COPY app/ ./app/
+COPY run_agent.py .
+COPY create_test_photos.py .
+COPY wipe_test_photos.py .
+COPY agent_config.json .
+
+# Optional files - copy only if present (use shell trick)
+COPY .env.example* ./
 
 EXPOSE 8000
 
 CMD ["python", "run_agent.py", "--serve", "--host", "0.0.0.0", "--port", "8000"]
-

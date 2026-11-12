@@ -6,4 +6,10 @@ __pycache__
 venv
 .venv
 .git
+test_dummy_drive
+*.exe
+*.zip
+# OneDrive lock files
+*.tmp
+~$*
 
