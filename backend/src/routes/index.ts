@@ -17,16 +17,19 @@ const router = Router();
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/customer', customerRoutes);
-router.use('/admin', adminRoutes);
+
+// Specific admin sub-routes MUST precede generic /admin
 router.use('/admin/sanitization', sanitizationRoutes);
+router.use('/admin/partners', partnerRoutes);
+router.use('/admin/refurbishment', refurbishmentRoutes);
+router.use('/admin/recycling', recyclingRoutes);
+router.use('/admin', adminRoutes);
+
 router.use('/agent', agentRoutes);
 
 // Phase 4 Routes
 router.use('/certificates', certificateRoutes);
 router.use('/marketplace', marketplaceRoutes);
-router.use('/admin/partners', partnerRoutes);
-router.use('/admin/refurbishment', refurbishmentRoutes);
-router.use('/admin/recycling', recyclingRoutes);
 router.use('/lifecycle', lifecycleRoutes);
 
 export default router;

@@ -452,15 +452,21 @@ export const deleteAgent = async (
   try {
     const { id } = req.params;
 
-    let query: any = { agentId: id };
-    if (id.match(/^[0-9a-fA-F]{24}$/)) {
-      query = { $or: [{ _id: id }, { agentId: id }] };
+    const cleanId = (id || '').trim();
+    let query: any = { agentId: cleanId };
+    if (cleanId.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { $or: [{ _id: cleanId }, { agentId: cleanId }] };
     }
 
     const agent = await Agent.findOneAndDelete(query);
 
     if (!agent) {
-      return next(new AppError(`Agent ${id} not found`, 404));
+      res.status(200).json({
+        success: true,
+        message: `Agent ${cleanId} was already removed or deleted.`,
+        data: { agentId: cleanId },
+      });
+      return;
     }
 
     res.status(200).json({

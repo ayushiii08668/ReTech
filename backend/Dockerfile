@@ -3,8 +3,8 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm directly via npm (reliable and works everywhere)
-RUN npm install -g pnpm@latest
+# Install pnpm directly via npm matching packageManager
+RUN npm install -g pnpm@9.15.0
 
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile=false
@@ -20,7 +20,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=10000
 
-RUN npm install -g pnpm@latest
+RUN npm install -g pnpm@9.15.0
 
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --prod --frozen-lockfile=false

@@ -162,8 +162,17 @@ export const sanitizationService = {
   },
 
   deleteAgent: async (id: string) => {
-    const res = await api.delete(`/admin/sanitization/agents/${id}`)
-    return res.data.data
+    try {
+      const res = await api.delete(`/admin/sanitization/agents/${id}`)
+      return res.data.data
+    } catch (err: any) {
+      // Fallback to POST in case HTTP DELETE is restricted by proxy
+      if (err?.response?.status === 404 || err?.response?.status === 405) {
+        const fallbackRes = await api.post(`/admin/sanitization/agents/${id}/delete`)
+        return fallbackRes.data.data
+      }
+      throw err
+    }
   },
 
   // Customer endpoints

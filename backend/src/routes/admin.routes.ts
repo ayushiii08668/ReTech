@@ -11,6 +11,7 @@ import {
   getAdminPickupDetails,
   updatePickupStatus,
 } from '../controllers/admin.controller.js';
+import sanitizationRoutes from './sanitization.routes.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 
 const router = Router();
@@ -18,6 +19,9 @@ const router = Router();
 // Protect all admin routes and restrict to ADMIN
 router.use(protect);
 router.use(restrictTo('ADMIN'));
+
+// Sanitization & Remote Node Management Sub-Router
+router.use('/sanitization', sanitizationRoutes);
 
 // Dashboard
 router.get('/dashboard', getAdminDashboard);
