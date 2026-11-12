@@ -727,16 +727,17 @@ export const getCustomerReports = async (
             : null,
           recycling: recycling
             ? {
-              recordId: recycling.recordId,
-              recyclerName: recycling.recyclerName,
-              transferDate: recycling.transferDate,
-              processingStatus: recycling.processingStatus,
-              finalOutcome: recycling.finalOutcome,
-            }
-          : null,
-        finalDestination,
-      };
-    });
+                recordId: recycling.recordId,
+                recyclerName: recycling.recyclerName,
+                transferDate: recycling.transferDate,
+                processingStatus: recycling.processingStatus,
+                finalOutcome: recycling.finalOutcome,
+              }
+            : null,
+          finalDestination,
+        };
+      }),
+    );
 
     res.status(200).json({
       success: true,
