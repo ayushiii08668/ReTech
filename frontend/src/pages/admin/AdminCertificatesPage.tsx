@@ -32,12 +32,6 @@ export default function AdminCertificatesPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  // Revocation Modal
-  const [revokingCert, setRevokingCert] = useState<SanitizationCertificate | null>(null)
-  const [revocationReason, setRevocationReason] = useState("")
-  const [revokingLoading, setRevokingLoading] = useState(false)
-  const [revokeError, setRevokeError] = useState<string | null>(null)
-
   // Certificate Issuance State
   const [issuingDeviceId, setIssuingDeviceId] = useState<string | null>(null)
   const [downloadingCertId, setDownloadingCertId] = useState<string | null>(null)
@@ -96,25 +90,6 @@ export default function AdminCertificatesPage() {
     }
   }
 
-  const handleRevoke = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!revokingCert) return
-
-    setRevokingLoading(true)
-    setRevokeError(null)
-
-    try {
-      await phase4Service.revokeCertificate(revokingCert.certificateNumber, revocationReason)
-      setRevokingCert(null)
-      setRevocationReason("")
-      loadCertificates()
-    } catch (err: any) {
-      setRevokeError(err?.response?.data?.message || "Failed to revoke certificate.")
-    } finally {
-      setRevokingLoading(false)
-    }
-  }
-
   const uncertifiedCount = eligibleItems.filter((i) => !i.hasCertificate).length
 
   return (
@@ -130,7 +105,7 @@ export default function AdminCertificatesPage() {
             Sanitization Certificates Management
           </h1>
           <p className="mt-1 font-dm-sans text-xs text-[#75665D]">
-            Generate, sign, and revoke official tamper-proof media sanitization certificates with cryptographic SHA-256 evidence.
+            Generate, manage, and inspect official media sanitization certificates with cryptographic SHA-256 evidence.
           </p>
         </div>
 
@@ -239,7 +214,6 @@ export default function AdminCertificatesPage() {
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active (Valid)</option>
-              <option value="REVOKED">Revoked</option>
             </select>
           </div>
 
@@ -339,15 +313,6 @@ export default function AdminCertificatesPage() {
                               >
                                 <ExternalLink className="h-3.5 w-3.5 text-[#C66D4E]" />
                               </a>
-
-                              {isValid && (
-                                <button
-                                  onClick={() => setRevokingCert(cert)}
-                                  className="rounded-xl border border-rose-200 bg-rose-50 px-2 py-1 font-dm-sans text-[11px] font-700 text-rose-700 hover:bg-rose-100"
-                                >
-                                  Revoke
-                                </button>
-                              )}
                             </div>
                           </td>
                         </tr>
@@ -449,70 +414,6 @@ export default function AdminCertificatesPage() {
           </div>
         </div>
       )}
-
-      {/* REVOCATION MODAL */}
-      <AnimatePresence>
-        {revokingCert && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg rounded-3xl border border-rose-200 bg-[#FFFDF8] p-6 shadow-warm-xl space-y-4"
-            >
-              <div className="flex items-center gap-2 text-rose-800">
-                <AlertTriangle className="h-5 w-5" />
-                <h3 className="font-manrope text-base font-800 text-rose-950">
-                  Revoke Certificate {revokingCert.certificateNumber}
-                </h3>
-              </div>
-
-              <p className="font-dm-sans text-xs text-[#75665D] leading-relaxed">
-                Revoking a certificate updates its status to REVOKED in the immutable public ledger and imprints a revocation banner on the official PDF. A mandatory justification is required for regulatory auditability.
-              </p>
-
-              {revokeError && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
-                  {revokeError}
-                </div>
-              )}
-
-              <form onSubmit={handleRevoke} className="space-y-4">
-                <div>
-                  <label className="block font-dm-sans text-xs font-700 text-[#47372E] mb-1">
-                    Mandatory Revocation Justification *
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={revocationReason}
-                    onChange={(e) => setRevocationReason(e.target.value)}
-                    placeholder="e.g. Storage controller hardware was swapped after initial testing; new sanitization job scheduled."
-                    className="w-full rounded-2xl border border-[#DDD1C3] bg-[#FAF7F2] p-3 font-dm-sans text-xs text-[#47372E] focus:outline-none focus:border-rose-400"
-                    required
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setRevokingCert(null)}
-                    className="rounded-xl border border-[#DDD1C3] bg-white px-4 py-2 font-dm-sans text-xs font-700 text-[#47372E]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={revokingLoading || revocationReason.trim().length < 5}
-                    className="rounded-xl bg-rose-700 px-4 py-2 font-dm-sans text-xs font-700 text-white hover:bg-rose-800 disabled:opacity-50"
-                  >
-                    {revokingLoading ? "Revoking..." : "Confirm Revocation"}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

@@ -1,5 +1,4 @@
 import PDFDocument from 'pdfkit';
-import QRCode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
 import { ISanitizationCertificate } from '../models/SanitizationCertificate.js';
@@ -19,16 +18,6 @@ export async function generateCertificatePDF(
   publicBaseUrl: string = 'http://localhost:5173',
 ): Promise<{ pdfPath: string; pdfBuffer: Buffer }> {
   const verificationUrl = `${publicBaseUrl}/verify-certificate/${certificate.verificationId}`;
-
-  // Generate QR code data URL
-  const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
-    width: 140,
-    margin: 1,
-    color: {
-      dark: '#47372E',
-      light: '#FFFDF8',
-    },
-  });
 
   return new Promise((resolve, reject) => {
     try {
@@ -252,33 +241,38 @@ export async function generateCertificatePDF(
 
       currentY += 60;
 
-      // QR Code & Verification Block
-      doc.image(qrCodeDataUrl, 45, currentY, { width: 90 });
+      // Public Verification Block (No QR code)
+      doc
+        .rect(45, currentY, 505, 55)
+        .fill('#F5F0E7')
+        .strokeColor('#DDD1C3')
+        .lineWidth(1)
+        .stroke();
 
       doc
         .font('Helvetica-Bold')
         .fontSize(9)
         .fillColor('#47372E')
-        .text('PUBLIC VERIFICATION AUDIT TRAIL', 145, currentY + 10);
+        .text('DIGITAL AUDIT & PUBLIC VERIFICATION TRAIL', 60, currentY + 12);
 
       doc
         .font('Helvetica')
         .fontSize(8)
         .fillColor('#75665D')
         .text(
-          'Scan the QR code or visit the public audit URL below to independently verify the authenticity and revocation status of this digital certificate:',
-          145,
-          currentY + 24,
-          { width: 395 },
+          'Independently verify the authenticity of this cryptographic certificate at the registry URL:',
+          60,
+          currentY + 26,
+          { width: 475 },
         );
 
       doc
         .font('Helvetica-Bold')
         .fontSize(8)
         .fillColor('#C66D4E')
-        .text(verificationUrl, 145, currentY + 54, { width: 395 });
+        .text(verificationUrl, 60, currentY + 38, { width: 475 });
 
-      currentY += 100;
+      currentY += 75;
 
       // Legal & Signoff Footer
       doc

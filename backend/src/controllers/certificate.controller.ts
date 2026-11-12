@@ -256,18 +256,7 @@ export const downloadCertificatePDF = async (
       return next(new AppError('You do not have permission to download this certificate.', 403));
     }
 
-    // If PDF file exists, stream it; otherwise regenerate
-    if (cert.pdfPath && fs.existsSync(cert.pdfPath)) {
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="ReTech-Certificate-${cert.certificateNumber}.pdf"`,
-      );
-      fs.createReadStream(cert.pdfPath).pipe(res);
-      return;
-    }
-
-    // Regenerate if file missing from disk
+    // Always generate/regenerate with current official template (clean layout without QR code)
     const [device, job] = await Promise.all([
       Device.findById(cert.deviceId),
       SanitizationJob.findById(cert.sanitizationJobId),
