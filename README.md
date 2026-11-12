@@ -224,20 +224,53 @@ retech/
 
 ## 🚀 Getting Started
 
-### 1. Prerequisites
+### ⚡ Quick Start: Run with Docker (Zero Manual Installation)
+
+You do **not** need to install Node.js, pnpm, Python, or MongoDB. All you need is [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+
+#### **On Windows:**
+Simply double-click **`start.bat`** in the project root (or run `docker compose up -d --build`).
+
+#### **On Mac / Linux:**
+```bash
+chmod +x start.sh && ./start.sh
+# or simply: docker compose up -d --build
+```
+
+#### **Live Services & Pre-Seeded Credentials:**
+| Service | Local URL | Credentials |
+|---|---|---|
+| **Web Application** | [http://localhost](http://localhost) *(or `http://localhost:5173`)* | — |
+| **Admin Operations** | `http://localhost/admin/login` | `admin@retech.in` / `Admin@ReTech2026!` |
+| **Customer Portal** | `http://localhost/login` | `customer@retech.in` / `Customer@2026!` |
+| **Backend API Health** | `http://localhost:5000/api/v1/health` | — |
+| **MongoDB Database** | `localhost:27017` | — |
+
+To stop all services:
+```bash
+docker compose down
+```
+
+---
+
+### 💻 Manual Developer Setup (Without Docker)
+
+If you prefer developing locally without Docker:
+
+#### 1. Prerequisites
 - Node.js 20+
 - pnpm 9+
 - MongoDB 6+ running locally (`mongodb://localhost:27017/retech`)
 - Python 3.12+ (for local sanitization agent)
 
-### 2. Start the Backend API (`http://localhost:5000`)
+#### 2. Start the Backend API (`http://localhost:5000`)
 ```bash
 cd backend
 pnpm install
 pnpm run dev
 ```
 
-### 3. Start the Frontend Application (`http://localhost:5173`)
+#### 3. Start the Frontend Application (`http://localhost:5173`)
 ```bash
 cd frontend
 pnpm install
