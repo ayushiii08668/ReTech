@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.js';
 import User from '../models/User.js';
-import Device, { DeviceStatus } from '../models/Device.js';
+import Device, { DeviceStatus, DeviceClassification } from '../models/Device.js';
 import PickupRequest, { PickupStatus } from '../models/PickupRequest.js';
 import AppError from '../utils/AppError.js';
 import { inspectionSchema, pickupStatusSchema, formatZodError } from '../utils/validators.js';

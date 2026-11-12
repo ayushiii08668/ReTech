@@ -336,9 +336,9 @@ export const getCustomerPickups = async (
     });
 
     const enrichedPickups = pickups.map((p) => {
-      const pObj = p.toObject();
-      const dev = pObj.deviceId;
-      const devIdStr = dev && typeof dev === 'object' ? dev._id.toString() : dev?.toString();
+      const pObj: any = p.toObject();
+      const dev: any = pObj.deviceId;
+      const devIdStr = dev && typeof dev === 'object' && dev._id ? dev._id.toString() : (dev ? String(dev) : '');
 
       const sJob = devIdStr ? jobMap.get(devIdStr) : null;
       const cert = devIdStr ? certMap.get(devIdStr) : null;
@@ -618,7 +618,7 @@ export const getCustomerReports = async (
     const reports = await Promise.all(
       devices.map(async (device) => {
         const job = sanitizationJobs.find((j) => j.deviceId.toString() === device._id.toString());
-        let cert = certificates.find((c) => c.deviceId.toString() === device._id.toString());
+        let cert: any = certificates.find((c) => c.deviceId.toString() === device._id.toString());
         const listing = listings.find((l) => l.deviceId.toString() === device._id.toString());
         const recycling = recyclingRecords.find((r) => r.deviceId.toString() === device._id.toString());
 
@@ -657,7 +657,7 @@ export const getCustomerReports = async (
               operationCompletedAt: job.completedAt || new Date(),
               verifiedAt: job.verificationResult?.verificationTimestamp || new Date(),
               issuedAt: new Date(),
-              issuedBy: job.assignedAgentId || device.customerId,
+              issuedBy: (job.agentId as any) || device.customerId,
               issuedByName: 'ReTech Automated Sanitization Agent',
               verificationOutcome: 'VERIFIED_SUCCESSFUL',
               evidenceReference: evidenceRef,

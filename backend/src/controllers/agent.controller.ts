@@ -404,7 +404,7 @@ export const reportJobResults = async (
             operationCompletedAt: job.completedAt || new Date(),
             verifiedAt: job.verificationResult?.verificationTimestamp || new Date(),
             issuedAt: new Date(),
-            issuedBy: job.assignedAgentId || device.customerId,
+            issuedBy: (job.agentId as any) || device.customerId,
             issuedByName: 'ReTech Automated Sanitization Agent',
             verificationOutcome: 'VERIFIED_SUCCESSFUL',
             evidenceReference: evidenceRef,
