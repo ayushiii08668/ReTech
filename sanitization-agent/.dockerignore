@@ -1,15 +1,12 @@
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.pytest_cache
-venv
-.venv
-.git
-test_dummy_drive
-*.exe
-*.zip
-# OneDrive lock files
-*.tmp
-~$*
+# Exclude everything by default, then whitelist only what Docker needs
+*
 
+# Whitelist: Python app source
+!app/
+!app/**
+!run_agent.py
+!create_test_photos.py
+!wipe_test_photos.py
+!requirements.txt
+!agent_config.json
+!.env.example

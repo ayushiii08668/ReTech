@@ -11,15 +11,12 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application source code
+# Copy application source code only (README, bat files, etc. excluded via .dockerignore)
 COPY app/ ./app/
 COPY run_agent.py .
 COPY create_test_photos.py .
 COPY wipe_test_photos.py .
 COPY agent_config.json .
-
-# Optional files - copy only if present (use shell trick)
-COPY .env.example* ./
 
 EXPOSE 8000
 
