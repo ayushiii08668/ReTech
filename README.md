@@ -277,12 +277,24 @@ pnpm install
 pnpm run dev
 ```
 
-### 4. (Optional) Run the Local Python Sanitization Agent
-```bash
-cd sanitization-agent
-pip install -r requirements.txt
-python -m uvicorn app.main:app --port 8765
-```
+### 4. Running the Local Sanitization Agent
+
+The Sanitization Agent can be run in any of three ways:
+
+- **Method A: Standalone Windows Executable (Zero Install — No Python or Docker needed)**
+  Double-click `retech_agent.exe` (or extract `retech-agent-windows-exe.zip`). Opens an interactive console menu immediately.
+
+- **Method B: Docker Container (No Python needed)**
+  Double-click `sanitization-agent/start_docker.bat` (or `./start_docker.sh` on Linux/macOS).
+
+- **Method C: Native Python**
+  ```bash
+  cd sanitization-agent
+  start.bat                  # On Windows
+  # or on Linux/macOS:
+  pip install -r requirements.txt
+  python run_agent.py
+  ```
 
 ---
 
