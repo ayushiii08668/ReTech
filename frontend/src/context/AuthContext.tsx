@@ -19,13 +19,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<IUser | null>(() => {
-    const savedUser = localStorage.getItem("retech_user")
-    return savedUser ? JSON.parse(savedUser) : null
+    try {
+      const savedUser = localStorage.getItem("retech_user")
+      return savedUser ? JSON.parse(savedUser) : null
+    } catch {
+      return null
+    }
   })
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem("retech_token")
   })
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    // If token and user already exist in local cache, do not block or reset session
+    const savedToken = localStorage.getItem("retech_token")
+    const savedUser = localStorage.getItem("retech_user")
+    return !savedToken || !savedUser
+  })
 
   const refreshUser = useCallback(async () => {
     const savedToken = localStorage.getItem("retech_token")
@@ -37,15 +46,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const res = await api.get("/auth/me")
-      if (res.data.success && res.data.user) {
-        setUser(res.data.user)
-        localStorage.setItem("retech_user", JSON.stringify(res.data.user))
+      const userData = res.data?.user || res.data?.data?.user
+      if (res.data?.success && userData) {
+        setUser(userData)
+        localStorage.setItem("retech_user", JSON.stringify(userData))
       }
-    } catch {
-      localStorage.removeItem("retech_token")
-      localStorage.removeItem("retech_user")
-      setUser(null)
-      setToken(null)
+    } catch (err: any) {
+      // ONLY clear session if server explicitly rejects with 401 Unauthorized
+      if (err?.response?.status === 401) {
+        console.warn("Session expired or rejected (401). Clearing auth session.")
+        localStorage.removeItem("retech_token")
+        localStorage.removeItem("retech_user")
+        setUser(null)
+        setToken(null)
+      } else {
+        console.warn("Network latency or server delay during user sync. Preserving local session:", err?.message)
+      }
     } finally {
       setIsLoading(false)
     }

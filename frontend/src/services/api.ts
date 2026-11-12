@@ -29,16 +29,21 @@ api.interceptors.response.use(
   (error) => {
     if (error.response) {
       const { status } = error.response
-      // Only redirect on 401 if not already on an auth page
+      // Only redirect on genuine 401 Unauthorized if not already on an auth page
       if (
         status === 401 &&
         !window.location.pathname.startsWith("/login") &&
         !window.location.pathname.startsWith("/admin/login") &&
         !window.location.pathname.startsWith("/register")
       ) {
+        let isAdmin = false
+        try {
+          const savedUser = localStorage.getItem("retech_user")
+          if (savedUser) isAdmin = JSON.parse(savedUser)?.role === "ADMIN"
+        } catch {}
         localStorage.removeItem("retech_token")
         localStorage.removeItem("retech_user")
-        window.location.href = "/login"
+        window.location.href = isAdmin || window.location.pathname.startsWith("/admin") ? "/admin/login" : "/login"
       }
     }
     return Promise.reject(error)
