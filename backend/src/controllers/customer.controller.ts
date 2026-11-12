@@ -297,36 +297,113 @@ export const getCustomerPickups = async (
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum)
-        .populate('deviceId', 'deviceId category brand model condition status certificateId marketplaceListingId'),
+        .populate('deviceId', 'deviceId category brand model condition status classification inspection certificateId marketplaceListingId'),
       PickupRequest.countDocuments(filter),
     ]);
 
-    // Cross-check verified sanitization jobs for customer devices
+    // Cross-check real operational lifecycle records in DB
     const deviceIds = pickups.map((p) => (p.deviceId as any)?._id || p.deviceId).filter(Boolean);
-    const verifiedJobs = await SanitizationJob.find({
-      deviceId: { $in: deviceIds },
-      status: 'VERIFIED_SUCCESSFUL',
-    }).select('deviceId jobId status verificationResult');
 
-    const verifiedDeviceMap = new Map();
-    verifiedJobs.forEach((j) => {
-      verifiedDeviceMap.set(j.deviceId.toString(), j);
+    const [sanitizationJobs, certificates, listings] = await Promise.all([
+      SanitizationJob.find({
+        deviceId: { $in: deviceIds },
+      }).sort({ createdAt: -1 }),
+      SanitizationCertificate.find({
+        deviceId: { $in: deviceIds },
+      }),
+      MarketplaceListing.find({
+        deviceId: { $in: deviceIds },
+        listingStatus: { $ne: 'CANCELLED' },
+      }),
+    ]);
+
+    const jobMap = new Map();
+    sanitizationJobs.forEach((j) => {
+      if (!jobMap.has(j.deviceId.toString())) {
+        jobMap.set(j.deviceId.toString(), j);
+      }
+    });
+
+    const certMap = new Map();
+    certificates.forEach((c) => {
+      certMap.set(c.deviceId.toString(), c);
+    });
+
+    const listingMap = new Map();
+    listings.forEach((l) => {
+      listingMap.set(l.deviceId.toString(), l);
     });
 
     const enrichedPickups = pickups.map((p) => {
       const pObj = p.toObject();
       const dev = pObj.deviceId;
-      if (dev && typeof dev === 'object') {
-        const vJob = verifiedDeviceMap.get(dev._id.toString());
-        if (vJob) {
-          (dev as any).hasVerifiedSanitization = true;
-          (dev as any).sanitizationJobId = vJob.jobId;
-          (dev as any).certificateId = dev.certificateId || vJob.verificationResult?.certificateId;
-          if (dev.status === 'INSPECTED' || dev.status === 'RECEIVED' || dev.status === 'SANITIZATION_PENDING') {
-            dev.status = dev.marketplaceListingId ? 'LISTED_FOR_RESALE' : 'SANITIZED';
-          }
-        }
+      const devIdStr = dev && typeof dev === 'object' ? dev._id.toString() : dev?.toString();
+
+      const sJob = devIdStr ? jobMap.get(devIdStr) : null;
+      const cert = devIdStr ? certMap.get(devIdStr) : null;
+      const listing = devIdStr ? listingMap.get(devIdStr) : null;
+
+      // Real process-driven stage verifications:
+      // Stage 7: Sanitization Verified (requires actual verified NIST wipe or certificate)
+      const isSanitizationVerified = Boolean(
+        (sJob && sJob.status === 'VERIFIED_SUCCESSFUL') ||
+        cert ||
+        (dev && ['SANITIZED', 'READY_FOR_RESALE', 'LISTED_FOR_RESALE', 'SOLD', 'RECYCLED'].includes(dev.status))
+      );
+
+      // Stage 8: Final Destination (marketplace listing, resale readiness, or recycling)
+      const isFinalDestinationReached = Boolean(
+        listing ||
+        (dev && ['READY_FOR_RESALE', 'LISTED_FOR_RESALE', 'SOLD', 'RECYCLED'].includes(dev.status))
+      );
+
+      // Stage 6: Queued or active in sanitization
+      const isSanitizationQueued = Boolean(
+        sJob ||
+        isSanitizationVerified ||
+        (dev && dev.status === 'SANITIZATION_PENDING')
+      );
+
+      // Stage 5: Hardware diagnostics / classification completed
+      const isInspected = Boolean(
+        isSanitizationQueued ||
+        (dev && dev.classification && dev.classification !== 'PENDING') ||
+        (dev && dev.inspection?.inspectedAt) ||
+        (dev && dev.status === 'INSPECTED')
+      );
+
+      // Determine real dynamic stage index (1 to 8)
+      let completedStage = 1;
+      if (['CANCELLED', 'REJECTED'].includes(pObj.status)) {
+        completedStage = 0;
+      } else if (isFinalDestinationReached) {
+        completedStage = 8;
+      } else if (isSanitizationVerified) {
+        completedStage = 7;
+      } else if (isSanitizationQueued) {
+        completedStage = 6;
+      } else if (isInspected) {
+        completedStage = 5;
+      } else if (pObj.status === 'RECEIVED' || dev?.status === 'RECEIVED') {
+        completedStage = 4;
+      } else if (pObj.status === 'COLLECTION_CONFIRMED') {
+        completedStage = 3;
+      } else if (['APPROVED', 'SCHEDULED'].includes(pObj.status)) {
+        completedStage = 2;
       }
+
+      if (dev && typeof dev === 'object') {
+        dev.hasVerifiedSanitization = isSanitizationVerified;
+        dev.certificateId = dev.certificateId || cert?.certificateNumber || sJob?.verificationResult?.certificateId;
+        dev.marketplaceListingId = dev.marketplaceListingId || listing?._id;
+        dev.sanitizationJobId = sJob?.jobId;
+        dev.sanitizationJobStatus = sJob?.status;
+      }
+
+      pObj.currentStageIndex = completedStage;
+      pObj.hasVerifiedSanitization = isSanitizationVerified;
+      pObj.sanitizationCertificateId = dev?.certificateId;
+
       return pObj;
     });
 

@@ -12,6 +12,7 @@ import {
   Laptop,
   Ban,
   ArrowRight,
+  ShieldCheck,
 } from "lucide-react"
 import api from "@/services/api"
 import { IPickupRequest } from "@/types"
@@ -21,13 +22,13 @@ const stages = [
   { id: 2, key: "APPROVED", label: "Request Approved", desc: "Logistics schedule verified" },
   { id: 3, key: "COLLECTION_CONFIRMED", label: "Collection Confirmed", desc: "Agent picked up device" },
   { id: 4, key: "RECEIVED", label: "Device Received", desc: "Arrived at central hub" },
-  { id: 5, key: "INSPECTION", label: "Inspection Pending", desc: "Hardware diagnostics" },
-  { id: 6, key: "PROCESSING", label: "Processing", desc: "Preparation for sanitization" },
-  { id: 7, key: "SANITIZATION", label: "Sanitization", desc: "NIST SP 800-88 data wipe" },
+  { id: 5, key: "INSPECTION", label: "Inspection Diagnostics", desc: "Hardware diagnostics & grading" },
+  { id: 6, key: "PROCESSING", label: "Sanitization Queue", desc: "Assigned to sanitization rig" },
+  { id: 7, key: "SANITIZATION", label: "Data Sanitization", desc: "NIST SP 800-88 data wipe verified" },
   { id: 8, key: "FINAL_DESTINATION", label: "Final Destination", desc: "Repurposed or Recycled" },
 ]
 
-// Helper to determine completed stage index based on pickup status & device status
+// Dynamic, process-driven stage calculation (strictly reflects real operational events)
 function getCompletedStageIndex(pickupStatus: string, device?: any): number {
   if (pickupStatus === "CANCELLED" || pickupStatus === "REJECTED") return 0
 
@@ -35,7 +36,7 @@ function getCompletedStageIndex(pickupStatus: string, device?: any): number {
   const hasSanitization = typeof device === "object" ? Boolean(device?.certificateId || device?.hasVerifiedSanitization) : false
   const hasListing = typeof device === "object" ? Boolean(device?.marketplaceListingId) : false
 
-  // Stage 8: Repurposed or Recycled (Listed in marketplace, sold, ready for resale, or recycled)
+  // Stage 8: Repurposed or Recycled (Circular outcome achieved: listed for resale, sold, or recycled)
   if (
     deviceStatus === "RECYCLED" ||
     deviceStatus === "READY_FOR_RESALE" ||
@@ -46,32 +47,35 @@ function getCompletedStageIndex(pickupStatus: string, device?: any): number {
     return 8
   }
 
-  // Stage 7: Sanitization Verified & Passed (NIST SP 800-88 data wipe)
+  // Stage 7: Sanitization Verified (requires genuine completed NIST SP 800-88 wipe or certificate)
   if (deviceStatus === "SANITIZED" || hasSanitization) {
     return 7
   }
 
-  // Stage 6: Processing / Preparation for sanitization
-  if (deviceStatus === "SANITIZATION_PENDING" || deviceStatus === "INSPECTED") {
+  // Stage 6: Queue / Preparation for sanitization
+  if (deviceStatus === "SANITIZATION_PENDING" || deviceStatus === "IN_REFURBISHMENT") {
     return 6
   }
 
-  // Stage 5: Hardware diagnostics pending
-  if (deviceStatus === "INSPECTION_PENDING") {
+  // Stage 5: Hardware diagnostics / inspection completed
+  if (
+    deviceStatus === "INSPECTED" ||
+    (typeof device === "object" && device?.classification && device.classification !== "PENDING")
+  ) {
     return 5
   }
 
-  // Stage 4: Arrived at central hub
-  if (pickupStatus === "RECEIVED" || deviceStatus === "RECEIVED") {
+  // Stage 4: Arrived at central warehouse
+  if (pickupStatus === "RECEIVED" || deviceStatus === "RECEIVED" || deviceStatus === "INSPECTION_PENDING") {
     return 4
   }
 
-  // Stage 3: Agent picked up device
+  // Stage 3: Courier confirmed collection
   if (pickupStatus === "COLLECTION_CONFIRMED") {
     return 3
   }
 
-  // Stage 2: Logistics schedule verified
+  // Stage 2: Pickup request approved / scheduled
   if (pickupStatus === "APPROVED" || pickupStatus === "SCHEDULED") {
     return 2
   }
@@ -179,7 +183,7 @@ export default function TrackRequestsPage() {
         <div className="space-y-6">
           {pickups.map((pickup) => {
             const dev = pickup.deviceId as any
-            const completedStage = getCompletedStageIndex(pickup.status, dev)
+            const completedStage = (pickup as any).currentStageIndex ?? getCompletedStageIndex(pickup.status, dev)
             const canCancel = ["PENDING", "APPROVED", "SCHEDULED"].includes(pickup.status)
 
             return (
@@ -303,6 +307,30 @@ export default function TrackRequestsPage() {
                       )
                     })}
                   </div>
+
+                  {/* Cryptographic Sanitization Proof & Certificate Link if Verified */}
+                  {(dev?.certificateId || (pickup as any).sanitizationCertificateId) && (
+                    <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <ShieldCheck className="h-5 w-5 text-emerald-700 shrink-0" />
+                        <div>
+                          <div className="font-manrope text-xs font-700 text-emerald-950">
+                            NIST SP 800-88 Data Sanitization Certified
+                          </div>
+                          <div className="font-mono text-[11px] text-emerald-800">
+                            Certificate ID: {dev?.certificateId || (pickup as any).sanitizationCertificateId}
+                          </div>
+                        </div>
+                      </div>
+                      <Link
+                        to={`/verify-certificate/${dev?.certificateId || (pickup as any).sanitizationCertificateId}`}
+                        className="inline-flex items-center gap-1 rounded-xl bg-emerald-700 px-3 py-1.5 font-dm-sans text-xs font-700 text-white hover:bg-emerald-800 transition-colors shrink-0 shadow-sm"
+                      >
+                        <span>Verify Certificate</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )
