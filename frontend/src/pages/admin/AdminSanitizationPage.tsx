@@ -236,6 +236,25 @@ export default function AdminSanitizationPage() {
     }
   }
 
+  // Delete sanitization job permanently
+  const handleDeleteJob = async (jobId: string) => {
+    if (
+      confirm(
+        `Are you sure you want to permanently delete sanitization job ${jobId}? This action cannot be undone.`
+      )
+    ) {
+      try {
+        await sanitizationService.deleteJob(jobId)
+        if (selectedJob && (selectedJob.jobId === jobId || selectedJob._id === jobId)) {
+          setSelectedJob(null)
+        }
+        loadData(true)
+      } catch (e: any) {
+        alert(e?.response?.data?.message || "Failed to delete sanitization job.")
+      }
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "VERIFIED_SUCCESSFUL":
@@ -652,6 +671,15 @@ export default function AdminSanitizationPage() {
                             >
                               <Terminal className="h-3.5 w-3.5 text-[#C66D4E]" />
                               Audit &amp; Logs
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteJob(job.jobId || job._id)}
+                              title="Delete Sanitization Job"
+                              className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 font-dm-sans text-xs font-700 text-rose-700 shadow-warm-sm hover:bg-rose-100 hover:border-rose-300 transition-all cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                              <span className="hidden sm:inline">Delete</span>
                             </button>
                           </div>
                         </td>
@@ -1220,10 +1248,17 @@ export default function AdminSanitizationPage() {
                 </div>
               </div>
 
-              <div className="border-t border-[#DDD1C3] bg-[#F5F0E7] px-6 py-3 flex justify-end">
+              <div className="border-t border-[#DDD1C3] bg-[#F5F0E7] px-6 py-3 flex items-center justify-between">
+                <button
+                  onClick={() => handleDeleteJob(selectedJob.jobId || selectedJob._id)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-1.5 font-dm-sans text-xs font-700 text-rose-700 hover:bg-rose-100 transition-all cursor-pointer"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                  <span>Delete Job</span>
+                </button>
                 <button
                   onClick={() => setSelectedJob(null)}
-                  className="rounded-xl bg-[#47372E] px-4 py-2 font-dm-sans text-xs font-700 text-white"
+                  className="rounded-xl bg-[#47372E] px-4 py-2 font-dm-sans text-xs font-700 text-white hover:bg-[#382b24] transition-all"
                 >
                   Close Audit View
                 </button>

@@ -5,6 +5,7 @@ import {
   getSanitizationJobById,
   createSanitizationJob,
   cancelSanitizationJob,
+  deleteSanitizationJob,
   getAgents,
   generatePairingCode,
   revokeAgent,
@@ -23,6 +24,8 @@ router.get('/jobs', getSanitizationJobs);
 router.get('/jobs/:id', getSanitizationJobById);
 router.post('/jobs', createSanitizationJob);
 router.patch('/jobs/:id/cancel', cancelSanitizationJob);
+router.delete('/jobs/:id', deleteSanitizationJob);
+router.post('/jobs/:id/delete', deleteSanitizationJob);
 
 router.get('/agents', getAgents);
 router.post('/agents/pairing-code', generatePairingCode);

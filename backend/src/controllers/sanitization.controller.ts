@@ -514,3 +514,41 @@ export const deleteAgent = async (
     next(error);
   }
 };
+
+/**
+ * Permanently delete / remove a sanitization job from the system
+ */
+export const deleteSanitizationJob = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const cleanId = (id || '').trim();
+    let query: any = { jobId: cleanId };
+    if (cleanId.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { $or: [{ _id: cleanId }, { jobId: cleanId }] };
+    }
+
+    const job = await SanitizationJob.findOneAndDelete(query);
+
+    if (!job) {
+      res.status(200).json({
+        success: true,
+        message: `Sanitization job ${cleanId} was already removed or deleted.`,
+        data: { jobId: cleanId },
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Sanitization job ${job.jobId} was permanently deleted.`,
+      data: { jobId: job.jobId },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -142,6 +142,19 @@ export const sanitizationService = {
     return res.data.data
   },
 
+  deleteJob: async (id: string) => {
+    try {
+      const res = await api.delete(`/admin/sanitization/jobs/${id}`)
+      return res.data.data
+    } catch (err: any) {
+      if (err?.response?.status === 404 || err?.response?.status === 405) {
+        const fallbackRes = await api.post(`/admin/sanitization/jobs/${id}/delete`)
+        return fallbackRes.data.data
+      }
+      throw err
+    }
+  },
+
   getAgents: async () => {
     const res = await api.get("/admin/sanitization/agents")
     return res.data.data as ConnectedAgent[]
