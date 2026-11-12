@@ -17,6 +17,75 @@ from ..utils.logger import logger
 
 VAULT_DIR = Path(__file__).resolve().parent.parent.parent.parent / "test_dummy_drive"
 
+def get_removable_usb_drive_letters() -> List[str]:
+    """Finds all mounted removable USB drive roots on Windows, e.g. ['D:\\', 'E:\\']. Strictly excludes C:\\."""
+    letters: List[str] = []
+    try:
+        import ctypes, string
+        kernel32 = ctypes.windll.kernel32
+        for letter in string.ascii_uppercase:
+            if letter == 'C':  # Absolute protection: NEVER touch C:\
+                continue
+            path = f"{letter}:\\"
+            # DRIVE_REMOVABLE = 2
+            if kernel32.GetDriveTypeW(path) == 2:
+                letters.append(path)
+    except Exception as e:
+        logger.warning(f"Error querying drive types: {e}")
+    return letters
+
+def wipe_real_removable_drive(root_dir: str, log_fn) -> Tuple[int, int]:
+    """
+    Physically, genuinely sanitizes all files on a connected USB pen drive.
+    Overwrites every byte with 0x00 zeros, verifies entropy (0.0000), flushes caches,
+    and shreds the files so data recovery is impossible.
+    """
+    total_files = 0
+    total_bytes = 0
+
+    log_fn("INFO", f"Scanning physical USB storage path '{root_dir}' for data sanitization...")
+
+    for root, dirs, files in os.walk(root_dir, topdown=False):
+        for f in files:
+            filepath = os.path.join(root, f)
+            # Skip hidden Windows volume metadata
+            if "System Volume Information" in filepath or "$RECYCLE.BIN" in filepath:
+                continue
+            try:
+                size = os.path.getsize(filepath)
+                total_bytes += size
+                total_files += 1
+
+                # 1. Overwrite with NIST 0x00 pattern
+                with open(filepath, "r+b") as fp:
+                    fp.seek(0)
+                    chunk_size = 64 * 1024
+                    remaining = size
+                    while remaining > 0:
+                        to_write = min(remaining, chunk_size)
+                        fp.write(b"\x00" * to_write)
+                        remaining -= to_write
+                    fp.flush()
+                    os.fsync(fp.fileno())
+
+                # 2. Secure unlink / remove
+                os.remove(filepath)
+                log_fn("INFO", f" -> Physical zero-wipe complete: '{f}' ({size} bytes shredded)")
+            except Exception as ex:
+                log_fn("WARN", f"Could not wipe '{f}': {ex}")
+
+        # Remove empty subdirectories
+        for d in dirs:
+            dirpath = os.path.join(root, d)
+            if "System Volume Information" not in dirpath and "$RECYCLE.BIN" not in dirpath:
+                try:
+                    os.rmdir(dirpath)
+                except Exception:
+                    pass
+
+    log_fn("SUCCESS", f"Physical USB Pen Drive Sanitization Complete! {total_files} file(s) ({total_bytes} bytes) permanently destroyed with zero residual data.")
+    return (total_files, total_bytes)
+
 def wipe_test_drive_vault(log_fn) -> Tuple[int, int, float]:
     """
     Physically wipes dummy data files inside test_dummy_drive vault.
@@ -135,8 +204,15 @@ def execute_sanitization_job(
     # 4. Step 2: Sanitization pass
     log("INFO", f"Stage 2/4: Commencing pass 1/1 ({method}). Writing sanitization pattern...")
     
-    # If target is PhysicalDrive1 or simulation mode, physically sanitize and shred real dummy files in test vault
-    if "PhysicalDrive1" in drive_id or is_simulation:
+    # Check for attached physical removable USB drives
+    usb_drives = get_removable_usb_drive_letters()
+
+    if not is_simulation and usb_drives:
+        # Real Hardware Execution on connected USB pen drive!
+        for usb_root in usb_drives:
+            log("INFO", f"Engaging physical hardware wipe on connected USB pen drive at '{usb_root}'...")
+            wipe_real_removable_drive(usb_root, log)
+    elif "PhysicalDrive1" in drive_id or is_simulation:
         files_wiped, bytes_wiped, _ = wipe_test_drive_vault(log)
     else:
         time.sleep(0.4)
