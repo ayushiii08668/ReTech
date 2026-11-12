@@ -1,10 +1,19 @@
+import sys
 import os
 import json
 from pathlib import Path
 from .models.schemas import AgentConfig
 from .utils.logger import logger
 
-CONFIG_FILE_PATH = Path(__file__).resolve().parent.parent / "agent_config.json"
+def get_config_path() -> Path:
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        if (exe_dir / "agent_config.json").exists():
+            return exe_dir / "agent_config.json"
+        return Path.cwd() / "agent_config.json"
+    return Path(__file__).resolve().parent.parent / "agent_config.json"
+
+CONFIG_FILE_PATH = get_config_path()
 
 DEFAULT_CONFIG = {
     "backendUrl": os.getenv("RETECH_BACKEND_URL", "https://retech-3x97.onrender.com/api/v1"),
@@ -16,23 +25,27 @@ DEFAULT_CONFIG = {
 }
 
 def load_config() -> AgentConfig:
-    if CONFIG_FILE_PATH.exists():
+    config_path = get_config_path()
+    if config_path.exists():
         try:
-            with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 merged = {**DEFAULT_CONFIG, **data}
                 return AgentConfig(**merged)
         except Exception as e:
-            logger.warning(f"Failed to read agent_config.json: {e}. Using defaults.")
+            logger.warning(f"Failed to read {config_path}: {e}. Using defaults.")
     return AgentConfig(**DEFAULT_CONFIG)
 
 def save_config(config: AgentConfig) -> bool:
+    config_path = get_config_path()
     try:
-        with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             json.dump(config.model_dump(), f, indent=2)
-        logger.info(f"Agent configuration saved to {CONFIG_FILE_PATH}")
+        logger.info(f"Agent configuration saved to {config_path}")
         return True
     except Exception as e:
+        logger.error(f"Failed to save agent configuration: {e}")
+        return False
         logger.error(f"Failed to save agent configuration: {e}")
         return False
 

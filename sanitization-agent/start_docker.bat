@@ -32,12 +32,15 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+echo Detecting Windows host storage hardware for safe inspection...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady } | Select-Object Name, DriveType, TotalSize, VolumeLabel | ConvertTo-Json -Compress | Out-File -FilePath host_hardware.json -Encoding utf8"
+
 echo Building ReTech Agent Docker image (contains Python 3.12 & all dependencies)...
 docker build -t retech-sanitization-agent .
 
 echo Starting interactive agent container...
 echo (Diagnostic REST API mapped to http://127.0.0.1:8000)
 echo ======================================================================
-docker run -it --rm -p 8000:8000 --name retech-agent-node retech-sanitization-agent python run_agent.py --menu
+docker run -it --rm -p 8000:8000 -v "%cd%/host_hardware.json:/app/host_hardware.json:ro" --name retech-agent-node retech-sanitization-agent python run_agent.py --menu
 
 pause

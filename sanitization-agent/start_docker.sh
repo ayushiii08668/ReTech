@@ -12,4 +12,8 @@ if ! command -v docker &> /dev/null; then
 fi
 
 docker build -t retech-sanitization-agent .
-docker run -it --rm -p 8000:8000 --name retech-agent-node retech-sanitization-agent python run_agent.py --menu
+if [ -f host_hardware.json ]; then
+    docker run -it --rm -p 8000:8000 -v "$(pwd)/host_hardware.json:/app/host_hardware.json:ro" --name retech-agent-node retech-sanitization-agent python run_agent.py --menu
+else
+    docker run -it --rm -p 8000:8000 --name retech-agent-node retech-sanitization-agent python run_agent.py --menu
+fi
