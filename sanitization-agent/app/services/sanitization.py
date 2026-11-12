@@ -15,7 +15,8 @@ from ..services.verification import run_cryptographic_verification, calculate_sh
 from ..models.schemas import VerificationResultSchema
 from ..utils.logger import logger
 
-VAULT_DIR = Path(__file__).resolve().parent.parent.parent.parent / "test_dummy_drive"
+AGENT_ROOT = Path(__file__).resolve().parent.parent.parent
+VAULT_DIR = AGENT_ROOT / "test_dummy_drive"
 
 def get_removable_usb_drive_letters() -> List[str]:
     """Finds all mounted removable USB drive roots on Windows, e.g. ['D:\\', 'E:\\']. Strictly excludes C:\\."""
@@ -101,11 +102,16 @@ def wipe_test_drive_vault(log_fn) -> Tuple[int, int, float]:
     if not files:
         log_fn("INFO", "Test drive vault empty. Auto-generating sample sensitive files & photos...")
         try:
-            from ...create_test_photos import generate_test_files
-            generate_test_files()
-            files = [f for f in os.listdir(VAULT_DIR) if (VAULT_DIR / f).is_file()]
-        except Exception:
-            pass
+            import importlib.util
+            script_path = AGENT_ROOT / "create_test_photos.py"
+            if script_path.exists():
+                spec = importlib.util.spec_from_file_location("create_test_photos", str(script_path))
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                mod.generate_test_files()
+                files = [f for f in os.listdir(VAULT_DIR) if (VAULT_DIR / f).is_file()]
+        except Exception as e:
+            logger.warning(f"Auto-population error: {e}")
 
     if not files:
         log_fn("INFO", "No files currently in test_dummy_drive vault.")

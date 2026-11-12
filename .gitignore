@@ -39,6 +39,7 @@ uploads/
 test_dummy_drive/
 agent_config.json
 sanitization-agent/agent_config.json
+*.zip
 .DS_Store
 Thumbs.db
 

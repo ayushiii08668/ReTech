@@ -7,7 +7,7 @@ from .utils.logger import logger
 CONFIG_FILE_PATH = Path(__file__).resolve().parent.parent / "agent_config.json"
 
 DEFAULT_CONFIG = {
-    "backendUrl": os.getenv("RETECH_BACKEND_URL", "http://localhost:5000/api/v1"),
+    "backendUrl": os.getenv("RETECH_BACKEND_URL", "https://retech-3x97.onrender.com/api/v1"),
     "agentId": os.getenv("RETECH_AGENT_ID", None),
     "agentName": os.getenv("RETECH_AGENT_NAME", "ReTech Local Agent Node"),
     "apiKey": os.getenv("RETECH_AGENT_KEY", None),

@@ -1,14 +1,14 @@
 r"""
 ReTech Secure Data Sanitization Engine (NIST SP 800-88 Clear).
 Executes single-pass logical overwrite, buffer flush, Shannon entropy check, and secure unlinking.
-Target: c:/Users/ayush/OneDrive/Desktop/Retech/test_dummy_drive
+Target: sanitization-agent/test_dummy_drive
 """
 import os
 import math
 import hashlib
 from pathlib import Path
 
-VAULT_DIR = Path(__file__).resolve().parent.parent / "test_dummy_drive"
+VAULT_DIR = Path(__file__).resolve().parent / "test_dummy_drive"
 
 def calculate_shannon_entropy(data: bytes) -> float:
     if not data:
@@ -31,8 +31,8 @@ def wipe_vault():
     files = [f for f in os.listdir(VAULT_DIR) if (VAULT_DIR / f).is_file()]
     if not files:
         print("\n" + "="*65)
-        print("VAULT IS ALREADY EMPTY. No files to wipe.")
-        print(f"Run 'python create_test_photos.py' first to generate sample files.")
+        print("VAULT IS CURRENTLY EMPTY.")
+        print(f"Run 'python create_test_photos.py' first to generate sample sensitive files.")
         print("="*65 + "\n")
         return
 
@@ -48,24 +48,29 @@ def wipe_vault():
         filepath = VAULT_DIR / filename
         size = filepath.stat().st_size
         total_bytes += size
-        print(f"\n[TARGET: {filename}] Size: {size} bytes")
+        print(f"\n[TARGET: {filename}] Size: {size:,} bytes")
 
         # Read original sample
         with open(filepath, "rb") as f:
             original = f.read(min(size, 2048))
         init_entropy = calculate_shannon_entropy(original)
-        print(f"  -> Pre-Wipe Entropy: {init_entropy} (Active, readable bytes)")
+        print(f"  -> Pre-Wipe Shannon Entropy: {init_entropy:.4f} (Active, readable payload)")
 
         # Stage 1: Overwrite with 0x00 pattern
-        print(f"  -> Stage 1/3: Overwriting {size} bytes with NIST SP 800-88 0x00 pattern...")
+        print(f"  -> Stage 1/3: Overwriting with NIST SP 800-88 0x00 zeros...")
         with open(filepath, "r+b") as f:
             f.seek(0)
-            f.write(b"\x00" * size)
+            chunk_size = 64 * 1024
+            remaining = size
+            while remaining > 0:
+                to_write = min(remaining, chunk_size)
+                f.write(b"\x00" * to_write)
+                remaining -= to_write
             f.flush()
             os.fsync(f.fileno())
 
         # Stage 2: Verification sampling & entropy calculation
-        print(f"  -> Stage 2/3: Sampling sectors & calculating Shannon entropy...")
+        print(f"  -> Stage 2/3: Verification sampling & Shannon entropy calculation...")
         with open(filepath, "rb") as f:
             wiped_data = f.read()
         post_entropy = calculate_shannon_entropy(wiped_data)
@@ -80,16 +85,15 @@ def wipe_vault():
         # Stage 3: File unlink
         print(f"  -> Stage 3/3: Unlinking file descriptor and freeing allocated storage blocks...")
         os.remove(filepath)
-        print(f"  -> File {filename} PERMANENTLY DESTROYED.")
+        print(f"  -> File '{filename}' PERMANENTLY DESTROYED.")
 
     print("\n" + "="*65)
     print("SANITIZATION SUMMARY: 100% VERIFIED CLEAN")
-    print(f"Total Bytes Overwritten & Shredded: {total_bytes} bytes")
+    print(f"Total Bytes Overwritten & Shredded: {total_bytes:,} bytes")
     print("Residual Recoverable Data: 0.0000%")
     print("Standard Compliance: NIST SP 800-88 Rev. 1 Clear")
-    print(f"Vault Status: Clean. All files purged from {VAULT_DIR}")
+    print(f"Vault Status: Clean. All files permanently purged from {VAULT_DIR}")
     print("="*65 + "\n")
 
 if __name__ == "__main__":
     wipe_vault()
-
