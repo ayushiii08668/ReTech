@@ -20,11 +20,13 @@ echo  Scanning your Windows hardware drives...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0detect_drives.ps1"
 echo.
 
+copy /y "%~dp0host_hardware.json" "%TEMP%\retech_host_hardware.json" >nul
+
 echo  Running drive audit inside Docker...
 echo  -------------------------------------------------------------------------
 docker run --rm ^
     --name retech-drive-scan ^
-    -v "%~dp0host_hardware.json:/app/host_hardware.json:ro" ^
+    -v "%TEMP%\retech_host_hardware.json:/app/host_hardware.json:ro" ^
     retech-sanitization-agent ^
     python run_agent.py --drives
 

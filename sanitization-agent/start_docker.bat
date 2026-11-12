@@ -52,16 +52,38 @@ if not exist "%~dp0host_hardware.json" (
 echo.
 
 :: ── STEP 2: Build Docker image ───────────────────────────────────────────────
-echo  [STEP 2/3] Building Docker image (first time takes ~2-3 mins, then cached)...
+echo  [STEP 2/3] Preparing clean build context and building Docker image...
 echo  -------------------------------------------------------------------------
-docker build -t retech-sanitization-agent "%~dp0."
-if %errorlevel% neq 0 (
+set "BUILD_DIR=%TEMP%\retech_agent_build"
+if exist "%BUILD_DIR%" rd /s /q "%BUILD_DIR%" >nul 2>nul
+mkdir "%BUILD_DIR%" >nul 2>nul
+mkdir "%BUILD_DIR%\app" >nul 2>nul
+
+:: Copy clean source files to local temp folder (completely bypasses OneDrive reparse points)
+xcopy /s /e /y /q "%~dp0app\*" "%BUILD_DIR%\app\" >nul
+copy /y "%~dp0Dockerfile" "%BUILD_DIR%\" >nul
+copy /y "%~dp0requirements.txt" "%BUILD_DIR%\" >nul
+copy /y "%~dp0run_agent.py" "%BUILD_DIR%\" >nul
+copy /y "%~dp0agent_config.json" "%BUILD_DIR%\" >nul
+copy /y "%~dp0create_test_photos.py" "%BUILD_DIR%\" >nul
+copy /y "%~dp0wipe_test_photos.py" "%BUILD_DIR%\" >nul
+
+docker build -t retech-sanitization-agent "%BUILD_DIR%"
+set BUILD_STATUS=%errorlevel%
+
+:: Clean up temp build folder
+rd /s /q "%BUILD_DIR%" >nul 2>nul
+
+if %BUILD_STATUS% neq 0 (
     color 0C
     echo.
     echo  [ERROR] Docker build failed! Check your internet connection and try again.
     pause
     exit /b 1
 )
+
+:: Copy host_hardware.json to clean local temp location for reliable container mounting
+copy /y "%~dp0host_hardware.json" "%TEMP%\retech_host_hardware.json" >nul
 
 :: ── STEP 3: Start agent ──────────────────────────────────────────────────────
 echo.
@@ -78,7 +100,7 @@ echo.
 docker run -it --rm ^
     -p 8000:8000 ^
     --name retech-agent-node ^
-    -v "%~dp0host_hardware.json:/app/host_hardware.json:ro" ^
+    -v "%TEMP%\retech_host_hardware.json:/app/host_hardware.json:ro" ^
     retech-sanitization-agent ^
     python run_agent.py --menu
 

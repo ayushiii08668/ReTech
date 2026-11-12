@@ -66,3 +66,4 @@ echo     docker rmi retech-sanitization-agent
 echo  =========================================================================
 echo.
 pause
+
