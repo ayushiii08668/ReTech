@@ -266,7 +266,13 @@ def discover_linux_drives() -> List[DriveInfo]:
     return drives
 
 def discover_host_hardware_json() -> List[DriveInfo]:
-    """Reads host hardware info passed into Docker container from Windows host."""
+    """Reads host hardware info passed into Docker container from Windows host.
+    
+    Supports three JSON formats produced by detect_drives.ps1:
+      1. Rich WMI format: [{Number, FriendlyName, SerialNumber, Size, InterfaceType, DriveLetters, IsBoot}]
+      2. Get-Disk format: [{Number, FriendlyName, SerialNumber, Size, BusType, IsBoot, IsSystem}]
+      3. Volume fallback: [{Name, DriveType, TotalSize, VolumeLabel, DriveFormat}]
+    """
     from pathlib import Path
     candidates = [
         Path("/app/host_hardware.json"),
@@ -280,47 +286,90 @@ def discover_host_hardware_json() -> List[DriveInfo]:
                     raw = json.load(f)
                 items = raw if isinstance(raw, list) else [raw]
                 drives: List[DriveInfo] = []
-                for item in items:
-                    if "FriendlyName" in item or "Number" in item:
-                        num = item.get("Number", 0)
-                        model = item.get("FriendlyName") or f"Host Disk #{num}"
-                        size = item.get("Size") or 0
-                        bus = str(item.get("BusType", "NVMe"))
-                        is_boot = bool(item.get("IsBoot") or item.get("IsSystem") or num == 0)
+
+                for idx, item in enumerate(items):
+                    # ── Format 1: Rich WMI (InterfaceType + DriveLetters + IsBoot) ──
+                    if "InterfaceType" in item and "DriveLetters" in item:
+                        num = item.get("Number", idx)
+                        model = item.get("FriendlyName") or f"Host Physical Disk #{num}"
+                        size = int(item.get("Size") or 0)
+                        bus = str(item.get("InterfaceType", "NVMe"))
+                        is_boot = bool(item.get("IsBoot", False))
+                        serial = str(item.get("SerialNumber") or "").strip() or f"WIN-HOST-{num:02d}"
+                        drive_letters = item.get("DriveLetters", [])
+                        label_suffix = f" ({', '.join(drive_letters)})" if drive_letters else ""
+                        is_nvme = "NVME" in bus.upper() or "NVME" in model.upper()
+                        is_ssd  = "SSD" in model.upper() or "SOLID" in model.upper()
+                        storage_type = "NVMe SSD" if is_nvme else ("SSD" if is_ssd else ("USB Flash" if "USB" in bus.upper() else "HDD"))
                         drives.append(
                             DriveInfo(
                                 driveId=f"PhysicalDrive{num}",
-                                model=model,
-                                serialNumber=str(item.get("SerialNumber", "")).strip() or f"WIN-HOST-{num:02d}",
+                                model=f"{model}{label_suffix}",
+                                serialNumber=serial,
                                 capacityBytes=size,
                                 capacityFormatted=format_bytes(size),
-                                storageType="NVMe SSD" if "NVME" in bus.upper() or "SSD" in model.upper() else "HDD",
+                                storageType=storage_type,
                                 interfaceType=bus,
                                 isSystemDrive=is_boot,
                                 isRemovable="USB" in bus.upper(),
                                 supportedMethods=get_all_supported_capabilities(),
                             )
                         )
-                    elif "Name" in item and "TotalSize" in item:
-                        name = str(item.get("Name", "C:\\"))
-                        size = item.get("TotalSize") or 0
-                        label = item.get("VolumeLabel") or ("OS" if "C" in name.upper() else "Data")
-                        is_system = "C" in name.upper()
+
+                    # ── Format 2: Get-Disk / BusType format ──
+                    elif "FriendlyName" in item or ("Number" in item and "BusType" in item):
+                        num = item.get("Number", idx)
+                        model = item.get("FriendlyName") or f"Host Disk #{num}"
+                        size = int(item.get("Size") or 0)
+                        bus = str(item.get("BusType", "NVMe"))
+                        is_boot = bool(item.get("IsBoot") or item.get("IsSystem") or num == 0)
+                        serial = str(item.get("SerialNumber") or "").strip() or f"WIN-HOST-{num:02d}"
+                        is_nvme = "NVME" in bus.upper() or "NVME" in model.upper()
+                        is_ssd  = "SSD" in model.upper() or "SOLID" in model.upper()
+                        storage_type = "NVMe SSD" if is_nvme else ("SSD" if is_ssd else ("USB Flash" if "USB" in bus.upper() else "HDD"))
                         drives.append(
                             DriveInfo(
-                                driveId="PhysicalDrive0",
-                                model=f"Host Disk ({name} [{label}])",
-                                serialNumber="WIN-HOST-00",
+                                driveId=f"PhysicalDrive{num}",
+                                model=model,
+                                serialNumber=serial,
                                 capacityBytes=size,
                                 capacityFormatted=format_bytes(size),
-                                storageType="NVMe SSD" if is_system else "SATA SSD",
-                                interfaceType="NVMe" if is_system else "SATA",
-                                isSystemDrive=is_system,
-                                isRemovable=item.get("DriveType") == 2,
+                                storageType=storage_type,
+                                interfaceType=bus,
+                                isSystemDrive=is_boot,
+                                isRemovable="USB" in bus.upper(),
                                 supportedMethods=get_all_supported_capabilities(),
                             )
                         )
+
+                    # ── Format 3: Volume / DriveInfo fallback (Name + TotalSize) ──
+                    elif "Name" in item and "TotalSize" in item:
+                        name = str(item.get("Name", "C:\\"))
+                        size = int(item.get("TotalSize") or 0)
+                        label = item.get("VolumeLabel") or ("OS" if "C" in name.upper() else "Data")
+                        fmt   = item.get("DriveFormat", "NTFS")
+                        is_system   = "C" in name.upper()
+                        is_removable = item.get("DriveType") == 2
+                        # Try to infer NVMe from size (C: drives on modern PCs are almost always NVMe)
+                        storage_type = "NVMe SSD" if is_system else ("USB Flash" if is_removable else "SATA SSD")
+                        iface        = "NVMe" if is_system else ("USB" if is_removable else "SATA")
+                        drives.append(
+                            DriveInfo(
+                                driveId=f"PhysicalDrive{idx}",
+                                model=f"Windows Host Disk — {name.rstrip(chr(92))} [{label}] ({fmt})",
+                                serialNumber=f"WIN-HOST-{idx:02d}",
+                                capacityBytes=size,
+                                capacityFormatted=format_bytes(size),
+                                storageType=storage_type,
+                                interfaceType=iface,
+                                isSystemDrive=is_system,
+                                isRemovable=is_removable,
+                                supportedMethods=get_all_supported_capabilities(),
+                            )
+                        )
+
                 if drives:
+                    # Always append a safe simulation test drive when only OS drive present
                     if len(drives) == 1 and drives[0].isSystemDrive:
                         drives.append(
                             DriveInfo(
@@ -336,9 +385,10 @@ def discover_host_hardware_json() -> List[DriveInfo]:
                                 supportedMethods=get_all_supported_capabilities(),
                             )
                         )
+                    logger.info(f"Host hardware JSON parsed: {len(drives)} drive(s) from {candidate}")
                     return drives
             except Exception as e:
-                logger.warning(f"Error parsing host_hardware.json: {e}")
+                logger.warning(f"Error parsing host_hardware.json ({candidate}): {e}")
     return []
 
 def discover_storage_drives() -> List[DriveInfo]:
