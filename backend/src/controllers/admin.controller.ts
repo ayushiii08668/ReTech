@@ -381,8 +381,25 @@ export const updateDeviceInspection = async (
       inspectedBy: adminId,
     };
 
-    device.classification = data.classification;
-    device.status = (data.status as DeviceStatus) || 'INSPECTED';
+    device.classification = (data.classification === 'PENDING' ? 'A' : data.classification) as DeviceClassification;
+
+    // Valid statuses for a device that has completed inspection
+    const postInspectionStatuses = [
+      'INSPECTED',
+      'SANITIZATION_PENDING',
+      'SANITIZED',
+      'READY_FOR_RESALE',
+      'LISTED_FOR_RESALE',
+      'SOLD',
+      'RECYCLED',
+    ];
+
+    if (data.status && postInspectionStatuses.includes(data.status)) {
+      device.status = data.status as DeviceStatus;
+    } else {
+      // Any intake status (SUBMITTED, PICKUP_SCHEDULED, COLLECTION_CONFIRMED, RECEIVED, INSPECTION_PENDING) moves to INSPECTED
+      device.status = 'INSPECTED';
+    }
 
     await device.save();
 

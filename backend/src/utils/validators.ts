@@ -100,14 +100,8 @@ export const inspectionSchema = z.object({
   storageCapacity: z.string().optional(),
   inspectionNotes: z.string().optional(),
   reusePotential: z.string().optional(),
-  classification: z.enum(['A', 'B', 'C', 'D']),
-  status: z.enum([
-    'INSPECTED',
-    'SANITIZATION_PENDING',
-    'SANITIZED',
-    'READY_FOR_RESALE',
-    'RECYCLED',
-  ]).optional(),
+  classification: z.enum(['A', 'B', 'C', 'D', 'PENDING']),
+  status: z.string().optional().nullable(),
 });
 
 export const pickupStatusSchema = z.object({

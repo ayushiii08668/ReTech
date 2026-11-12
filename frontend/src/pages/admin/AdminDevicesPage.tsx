@@ -71,15 +71,24 @@ export default function AdminDevicesPage() {
   const openInspection = (dev: IDevice) => {
     setInspectingDevice(dev)
     setErr(null)
+    const validPostInspectionStatuses = [
+      'INSPECTED',
+      'SANITIZATION_PENDING',
+      'SANITIZED',
+      'READY_FOR_RESALE',
+      'RECYCLED',
+    ]
+    const targetStatus = validPostInspectionStatuses.includes(dev.status) ? dev.status : 'INSPECTED'
+
     setInspectionForm({
       physicalCondition: dev.inspection?.physicalCondition || dev.condition || "Good",
-      powersOn: dev.inspection?.powersOn !== undefined ? dev.inspection.powersOn : dev.powersOn,
+      powersOn: dev.inspection?.powersOn !== undefined ? dev.inspection.powersOn : (dev.powersOn ?? true),
       storageType: dev.inspection?.storageType || dev.storageType || "SSD",
       storageCapacity: dev.inspection?.storageCapacity || dev.storageCapacity || "512 GB",
       inspectionNotes: dev.inspection?.inspectionNotes || "",
       reusePotential: dev.inspection?.reusePotential || "High",
       classification: (dev.classification === "PENDING" ? "A" : dev.classification) as DeviceClassification,
-      status: dev.status === "SUBMITTED" ? "INSPECTED" : dev.status,
+      status: targetStatus,
     })
   }
 
@@ -90,9 +99,13 @@ export default function AdminDevicesPage() {
     setErr(null)
 
     try {
-      const res = await api.patch(`/admin/devices/${inspectingDevice.deviceId}/inspection`, inspectionForm)
+      const payload = {
+        ...inspectionForm,
+        status: inspectionForm.status || 'INSPECTED',
+      }
+      const res = await api.patch(`/admin/devices/${inspectingDevice.deviceId}/inspection`, payload)
       if (res.data.success) {
-        setMsg(`Inspection and Classification recorded for ${inspectingDevice.deviceId} (Grade ${inspectionForm.classification}).`)
+        setMsg(`Inspection and Classification recorded for ${inspectingDevice.deviceId} (Grade ${inspectionForm.classification}). Device transitioned to ${payload.status}.`)
         setInspectingDevice(null)
         fetchDevices()
       }
