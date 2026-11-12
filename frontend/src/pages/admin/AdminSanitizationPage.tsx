@@ -52,6 +52,7 @@ export default function AdminSanitizationPage() {
   const [methodFilter, setMethodFilter] = useState("ALL")
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [activeResaleListings, setActiveResaleListings] = useState<Map<string, any>>(new Map())
 
   // Modals
   const [selectedJob, setSelectedJob] = useState<SanitizationJob | null>(null)
@@ -82,7 +83,7 @@ export default function AdminSanitizationPage() {
     if (!isPoll) setLoading(true)
     else setRefreshing(true)
     try {
-      const [dashRes, jobsRes, agentsRes] = await Promise.all([
+      const [dashRes, jobsRes, agentsRes, listingsRes] = await Promise.all([
         sanitizationService.getDashboardStats(),
         sanitizationService.getJobs({
           search,
@@ -92,7 +93,20 @@ export default function AdminSanitizationPage() {
           limit: 10,
         }),
         sanitizationService.getAgents(),
+        api.get("/marketplace/admin/listings", { params: { limit: 100 } }).catch(() => ({ data: { success: false, data: { listings: [] } } })),
       ])
+
+      const listingMap = new Map<string, any>()
+      if (listingsRes?.data?.data?.listings) {
+        listingsRes.data.data.listings.forEach((lst: any) => {
+          if (lst.listingStatus !== "CANCELLED") {
+            const devId = typeof lst.deviceId === "object" ? lst.deviceId?._id : lst.deviceId
+            if (devId) listingMap.set(String(devId), lst)
+            if (lst.retechDeviceId) listingMap.set(String(lst.retechDeviceId), lst)
+          }
+        })
+      }
+      setActiveResaleListings(listingMap)
 
       setStats(dashRes.stats)
       setJobs(jobsRes.jobs)
@@ -589,19 +603,49 @@ export default function AdminSanitizationPage() {
 
                         <td className="py-4 px-5 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {job.status === "VERIFIED_SUCCESSFUL" && (
-                              <button
-                                onClick={() => {
-                                  const devId = typeof job.deviceId === "object" ? (job.deviceId as any)?._id : job.deviceId
-                                  navigate(`/admin/marketplace?deviceId=${devId}`)
-                                }}
-                                title="Approve this sanitized device and create a resale listing"
-                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 font-dm-sans text-xs font-700 text-emerald-800 shadow-warm-sm hover:bg-emerald-100 transition-all"
-                              >
-                                <ShoppingBag className="h-3.5 w-3.5 text-emerald-700" />
-                                <span>Approve for Resale</span>
-                              </button>
-                            )}
+                            {job.status === "VERIFIED_SUCCESSFUL" && (() => {
+                              const rawDevId = typeof job.deviceId === "object" ? (job.deviceId as any)?._id : job.deviceId
+                              const devStatus = typeof job.deviceId === "object" ? (job.deviceId as any)?.status : null
+                              const devMktId = typeof job.deviceId === "object" ? (job.deviceId as any)?.marketplaceListingId : null
+
+                              const listing = (rawDevId && activeResaleListings.get(String(rawDevId))) ||
+                                              (job.retechDeviceId && activeResaleListings.get(String(job.retechDeviceId))) ||
+                                              (job as any).marketplaceListing
+
+                              const isAlreadyListed = Boolean(
+                                listing ||
+                                devMktId ||
+                                devStatus === "LISTED_FOR_RESALE" ||
+                                (job as any).isListedForResale
+                              )
+
+                              if (isAlreadyListed) {
+                                const listingRef = listing?.listingId || "Listed"
+                                return (
+                                  <button
+                                    onClick={() => navigate('/admin/marketplace')}
+                                    title={`Device is already listed in Resale Marketplace (${listingRef}). Click to view or manage listing.`}
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-100/90 px-3 py-1.5 font-dm-sans text-xs font-700 text-emerald-900 shadow-warm-sm hover:bg-emerald-200 transition-all"
+                                  >
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                                    <span>Listed in Resale</span>
+                                  </button>
+                                )
+                              }
+
+                              return (
+                                <button
+                                  onClick={() => {
+                                    navigate(`/admin/marketplace?deviceId=${rawDevId}`)
+                                  }}
+                                  title="Approve this sanitized device and create a resale listing"
+                                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 font-dm-sans text-xs font-700 text-emerald-800 shadow-warm-sm hover:bg-emerald-100 transition-all"
+                                >
+                                  <ShoppingBag className="h-3.5 w-3.5 text-emerald-700" />
+                                  <span>Approve for Resale</span>
+                                </button>
+                              )
+                            })()}
                             <button
                               onClick={() => setSelectedJob(job)}
                               className="inline-flex items-center gap-1.5 rounded-xl border border-[#DDD1C3] bg-[#FFFDF8] px-3 py-1.5 font-dm-sans text-xs font-700 text-[#47372E] shadow-warm-sm hover:bg-[#F5F0E7] transition-all"

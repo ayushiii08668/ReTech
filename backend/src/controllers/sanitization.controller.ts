@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import SanitizationJob, { SanitizationJobStatus } from '../models/SanitizationJob.js';
 import Agent, { AgentStatus } from '../models/Agent.js';
 import Device from '../models/Device.js';
+import MarketplaceListing from '../models/MarketplaceListing.js';
 import { getNextId } from '../models/Counter.js';
 import AppError from '../utils/AppError.js';
 import { AuthenticatedRequest } from '../middleware/auth.js';
@@ -117,15 +118,50 @@ export const getSanitizationJobs = async (
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('deviceId', 'deviceId category brand model condition storageType storageCapacity')
+        .populate('deviceId', 'deviceId category brand model condition status classification marketplaceListingId storageType storageCapacity')
         .populate('agentId', 'agentId name hostname platform status'),
       SanitizationJob.countDocuments(query),
     ]);
 
+    // Check which devices have active marketplace listings
+    const deviceDbIds = jobs.map((j) => (j.deviceId as any)?._id || j.deviceId).filter(Boolean);
+    const deviceRetechIds = jobs.map((j) => j.retechDeviceId).filter(Boolean);
+
+    const activeListings = await MarketplaceListing.find({
+      $or: [
+        { deviceId: { $in: deviceDbIds } },
+        { retechDeviceId: { $in: deviceRetechIds } },
+      ],
+      listingStatus: { $ne: 'CANCELLED' },
+    }).select('listingId deviceId retechDeviceId listingStatus price');
+
+    const listingMap = new Map();
+    activeListings.forEach((lst) => {
+      if (lst.deviceId) listingMap.set(lst.deviceId.toString(), lst);
+      if (lst.retechDeviceId) listingMap.set(lst.retechDeviceId, lst);
+    });
+
+    const jobsWithListing = jobs.map((job) => {
+      const jobObj = job.toObject();
+      const devKey = (job.deviceId as any)?._id?.toString() || job.deviceId?.toString();
+      const retechKey = job.retechDeviceId;
+      const listing = listingMap.get(devKey) || listingMap.get(retechKey) || null;
+      const isListed = Boolean(
+        listing ||
+        (job.deviceId as any)?.marketplaceListingId ||
+        (job.deviceId as any)?.status === 'LISTED_FOR_RESALE',
+      );
+      return {
+        ...jobObj,
+        marketplaceListing: listing,
+        isListedForResale: isListed,
+      };
+    });
+
     res.status(200).json({
       success: true,
       data: {
-        jobs,
+        jobs: jobsWithListing,
         pagination: {
           total,
           page,
