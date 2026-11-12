@@ -18,6 +18,7 @@ import uvicorn
 from pathlib import Path
 
 from app.config import load_config
+from app.main import app as fastapi_app
 from app.services.authentication import pair_with_backend
 from app.services.device_discovery import discover_storage_drives
 from app.services.job_runner import send_heartbeat, poll_and_process_jobs
@@ -96,7 +97,7 @@ def interactive_menu():
             print("\nStarting ReTech Agent Service on 127.0.0.1:8000...")
             print("Press Ctrl+C to stop.\n")
             try:
-                uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=False)
+                uvicorn.run(fastapi_app, host="127.0.0.1", port=8000)
             except KeyboardInterrupt:
                 print("\nService stopped.")
         elif choice == "4":
@@ -114,7 +115,7 @@ def interactive_menu():
             except Exception:
                 pass
             try:
-                uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=False)
+                uvicorn.run(fastapi_app, host="127.0.0.1", port=8000)
             except KeyboardInterrupt:
                 print("\nAPI stopped.")
         elif choice == "7":
@@ -176,7 +177,7 @@ def main():
 
     # If --serve specified or default non-interactive
     logger.info(f"Starting ReTech Sanitization Agent service on {args.host}:{args.port}...")
-    uvicorn.run("app.main:app", host=args.host, port=args.port, reload=False)
+    uvicorn.run(fastapi_app, host=args.host, port=args.port)
 
 if __name__ == "__main__":
     main()
