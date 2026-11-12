@@ -394,7 +394,18 @@ export const updateDeviceInspection = async (
       'RECYCLED',
     ];
 
-    if (data.status && postInspectionStatuses.includes(data.status)) {
+    // Preserve advanced status if device was already sanitized or listed
+    const alreadySanitizedOrListed = Boolean(
+      device.certificateId ||
+      device.marketplaceListingId ||
+      ['SANITIZED', 'READY_FOR_RESALE', 'LISTED_FOR_RESALE', 'SOLD', 'RECYCLED'].includes(device.status),
+    );
+
+    if (device.marketplaceListingId || device.status === 'LISTED_FOR_RESALE') {
+      device.status = 'LISTED_FOR_RESALE';
+    } else if (alreadySanitizedOrListed) {
+      device.status = (data.status === 'READY_FOR_RESALE' || data.status === 'RECYCLED') ? (data.status as DeviceStatus) : 'SANITIZED';
+    } else if (data.status && postInspectionStatuses.includes(data.status)) {
       device.status = data.status as DeviceStatus;
     } else {
       // Any intake status (SUBMITTED, PICKUP_SCHEDULED, COLLECTION_CONFIRMED, RECEIVED, INSPECTION_PENDING) moves to INSPECTED

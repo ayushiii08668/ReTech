@@ -28,16 +28,54 @@ const stages = [
 ]
 
 // Helper to determine completed stage index based on pickup status & device status
-function getCompletedStageIndex(pickupStatus: string, deviceStatus?: string): number {
+function getCompletedStageIndex(pickupStatus: string, device?: any): number {
   if (pickupStatus === "CANCELLED" || pickupStatus === "REJECTED") return 0
-  if (deviceStatus === "RECYCLED" || deviceStatus === "READY_FOR_RESALE") return 8
-  if (deviceStatus === "SANITIZED") return 7
-  if (deviceStatus === "SANITIZATION_PENDING" || deviceStatus === "INSPECTED") return 6
-  if (deviceStatus === "INSPECTION_PENDING") return 5
-  if (pickupStatus === "RECEIVED" || deviceStatus === "RECEIVED") return 4
-  if (pickupStatus === "COLLECTION_CONFIRMED") return 3
-  if (pickupStatus === "APPROVED" || pickupStatus === "SCHEDULED") return 2
-  if (pickupStatus === "PENDING") return 1
+
+  const deviceStatus = typeof device === "object" ? device?.status : device
+  const hasSanitization = typeof device === "object" ? Boolean(device?.certificateId || device?.hasVerifiedSanitization) : false
+  const hasListing = typeof device === "object" ? Boolean(device?.marketplaceListingId) : false
+
+  // Stage 8: Repurposed or Recycled (Listed in marketplace, sold, ready for resale, or recycled)
+  if (
+    deviceStatus === "RECYCLED" ||
+    deviceStatus === "READY_FOR_RESALE" ||
+    deviceStatus === "LISTED_FOR_RESALE" ||
+    deviceStatus === "SOLD" ||
+    hasListing
+  ) {
+    return 8
+  }
+
+  // Stage 7: Sanitization Verified & Passed (NIST SP 800-88 data wipe)
+  if (deviceStatus === "SANITIZED" || hasSanitization) {
+    return 7
+  }
+
+  // Stage 6: Processing / Preparation for sanitization
+  if (deviceStatus === "SANITIZATION_PENDING" || deviceStatus === "INSPECTED") {
+    return 6
+  }
+
+  // Stage 5: Hardware diagnostics pending
+  if (deviceStatus === "INSPECTION_PENDING") {
+    return 5
+  }
+
+  // Stage 4: Arrived at central hub
+  if (pickupStatus === "RECEIVED" || deviceStatus === "RECEIVED") {
+    return 4
+  }
+
+  // Stage 3: Agent picked up device
+  if (pickupStatus === "COLLECTION_CONFIRMED") {
+    return 3
+  }
+
+  // Stage 2: Logistics schedule verified
+  if (pickupStatus === "APPROVED" || pickupStatus === "SCHEDULED") {
+    return 2
+  }
+
   return 1
 }
 
@@ -141,7 +179,7 @@ export default function TrackRequestsPage() {
         <div className="space-y-6">
           {pickups.map((pickup) => {
             const dev = pickup.deviceId as any
-            const completedStage = getCompletedStageIndex(pickup.status, dev?.status)
+            const completedStage = getCompletedStageIndex(pickup.status, dev)
             const canCancel = ["PENDING", "APPROVED", "SCHEDULED"].includes(pickup.status)
 
             return (

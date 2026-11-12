@@ -297,14 +297,43 @@ export const getCustomerPickups = async (
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum)
-        .populate('deviceId', 'deviceId category brand model condition status'),
+        .populate('deviceId', 'deviceId category brand model condition status certificateId marketplaceListingId'),
       PickupRequest.countDocuments(filter),
     ]);
+
+    // Cross-check verified sanitization jobs for customer devices
+    const deviceIds = pickups.map((p) => (p.deviceId as any)?._id || p.deviceId).filter(Boolean);
+    const verifiedJobs = await SanitizationJob.find({
+      deviceId: { $in: deviceIds },
+      status: 'VERIFIED_SUCCESSFUL',
+    }).select('deviceId jobId status verificationResult');
+
+    const verifiedDeviceMap = new Map();
+    verifiedJobs.forEach((j) => {
+      verifiedDeviceMap.set(j.deviceId.toString(), j);
+    });
+
+    const enrichedPickups = pickups.map((p) => {
+      const pObj = p.toObject();
+      const dev = pObj.deviceId;
+      if (dev && typeof dev === 'object') {
+        const vJob = verifiedDeviceMap.get(dev._id.toString());
+        if (vJob) {
+          (dev as any).hasVerifiedSanitization = true;
+          (dev as any).sanitizationJobId = vJob.jobId;
+          (dev as any).certificateId = dev.certificateId || vJob.verificationResult?.certificateId;
+          if (dev.status === 'INSPECTED' || dev.status === 'RECEIVED' || dev.status === 'SANITIZATION_PENDING') {
+            dev.status = dev.marketplaceListingId ? 'LISTED_FOR_RESALE' : 'SANITIZED';
+          }
+        }
+      }
+      return pObj;
+    });
 
     res.status(200).json({
       success: true,
       data: {
-        pickups,
+        pickups: enrichedPickups,
         pagination: {
           total,
           page: pageNum,
