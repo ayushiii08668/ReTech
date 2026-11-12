@@ -13,6 +13,12 @@ services:
       - mongo-data:/data/db
     networks:
       - retech-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
@@ -29,10 +35,19 @@ services:
       CORS_ORIGIN: "http://localhost,http://localhost:5173,http://localhost:80"
       JWT_SECRET: "retech_jwt_production_secret_change_in_real_env_2026_xyz"
       JWT_EXPIRES_IN: "7d"
+      ADMIN_EMAIL: "admin@retech.in"
+      ADMIN_PASSWORD: "Admin@ReTech2026!"
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - retech-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   frontend:
     build:
@@ -44,7 +59,8 @@ services:
       - "80:80"
       - "5173:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - retech-network
 
@@ -55,4 +71,3 @@ volumes:
 networks:
   retech-network:
     driver: bridge
-
