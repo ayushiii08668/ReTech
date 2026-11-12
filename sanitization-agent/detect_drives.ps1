@@ -50,7 +50,7 @@ try {
             Size          = $phys.Size
             InterfaceType = $phys.InterfaceType
             DriveLetters  = $driveLetters
-            IsBoot        = ($driveLetters -contains "C:\")
+            IsBoot        = ($driveLetters -contains "C:\") -or ($phys.Index -eq 0) -or ($physDisks.Count -eq 1)
         }
     }
     if ($enriched.Count -gt 0) {

@@ -294,7 +294,7 @@ def discover_host_hardware_json() -> List[DriveInfo]:
                         model = item.get("FriendlyName") or f"Host Physical Disk #{num}"
                         size = int(item.get("Size") or 0)
                         bus = str(item.get("InterfaceType", "NVMe"))
-                        is_boot = bool(item.get("IsBoot", False))
+                        is_boot = bool(item.get("IsBoot") or num == 0 or len(items) == 1)
                         serial = str(item.get("SerialNumber") or "").strip() or f"WIN-HOST-{num:02d}"
                         drive_letters = item.get("DriveLetters", [])
                         label_suffix = f" ({', '.join(drive_letters)})" if drive_letters else ""
@@ -369,8 +369,9 @@ def discover_host_hardware_json() -> List[DriveInfo]:
                         )
 
                 if drives:
-                    # Always append a safe simulation test drive when only OS drive present
-                    if len(drives) == 1 and drives[0].isSystemDrive:
+                    # If only 1 drive present, it is definitely the host OS disk (lock it) and attach simulation target
+                    if len(drives) == 1:
+                        drives[0].isSystemDrive = True
                         drives.append(
                             DriveInfo(
                                 driveId="PhysicalDrive1",
