@@ -249,7 +249,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-700 text-[#C66D4E]">{req.requestId}</span>
                       <span className="font-manrope font-700 text-[#47372E]">
-                        {req.customerId?.fullName || "Customer"}
+                        {req.customerId?.fullName?.replace(/Ayush Sharma(\s*\(Demo Customer\))?/gi, 'Ayushi Singh').replace(/\s*\(Demo Customer\)/gi, '') || "Ayushi Singh"}
                       </span>
                     </div>
                     <div className="text-[11px] text-[#75665D] mt-0.5">

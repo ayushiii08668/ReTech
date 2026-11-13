@@ -233,7 +233,7 @@ export default function AdminDevicesPage() {
 
                       <td className="px-6 py-4">
                         <div className="font-manrope font-600 text-[#47372E]">
-                          {cust?.fullName || "Customer"}
+                          {cust?.fullName?.replace(/Ayush Sharma(\s*\(Demo Customer\))?/gi, 'Ayushi Singh').replace(/\s*\(Demo Customer\)/gi, '') || "Ayushi Singh"}
                         </div>
                         <div className="text-[11px] text-[#75665D]">{cust?.email}</div>
                       </td>

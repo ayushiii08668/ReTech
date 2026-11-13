@@ -201,7 +201,7 @@ export default function AdminPickupsPage() {
                       <td className="px-6 py-4">
                         <div className="font-mono font-700 text-[#C66D4E]">{req.requestId}</div>
                         <div className="font-manrope font-700 text-[#47372E] mt-0.5">
-                          {cust?.fullName || "Customer"}
+                          {cust?.fullName?.replace(/Ayush Sharma(\s*\(Demo Customer\))?/gi, 'Ayushi Singh').replace(/\s*\(Demo Customer\)/gi, '') || "Customer"}
                         </div>
                         <div className="text-[11px] text-[#75665D]">{req.contactNumber}</div>
                       </td>

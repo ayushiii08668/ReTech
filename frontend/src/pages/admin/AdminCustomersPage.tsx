@@ -182,7 +182,9 @@ export default function AdminCustomersPage() {
                 customers.map((cust) => (
                   <tr key={cust._id} className="hover:bg-[#EAE1D5]/20 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-manrope font-700 text-[#47372E]">{cust.fullName}</div>
+                      <div className="font-manrope font-700 text-[#47372E]">
+                        {cust.fullName?.replace(/Ayush Sharma(\s*\(Demo Customer\))?/gi, 'Ayushi Singh').replace(/\s*\(Demo Customer\)/gi, '')}
+                      </div>
                       <div className="text-[11px] text-[#75665D]">{cust.email}</div>
                     </td>
 
@@ -289,7 +291,7 @@ export default function AdminCustomersPage() {
               <div className="mb-6">
                 <span className="font-mono text-xs font-700 text-[#C66D4E]">CUSTOMER PROFILE</span>
                 <h2 className="font-manrope text-2xl font-800 text-[#47372E]">
-                  {selectedCustomer.fullName}
+                  {selectedCustomer.fullName?.replace(/Ayush Sharma(\s*\(Demo Customer\))?/gi, 'Ayushi Singh').replace(/\s*\(Demo Customer\)/gi, '')}
                 </h2>
                 <p className="font-dm-sans text-xs text-[#75665D]">
                   {selectedCustomer.email} &middot; {selectedCustomer.phone || "No phone"}
