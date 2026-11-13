@@ -260,7 +260,7 @@ export default function AdminCertificatesPage() {
                               {cert.retechDeviceId} &bull; {cert.deviceId?.brand} {cert.deviceId?.model}
                             </div>
                             <div className="text-[11px] text-[#75665D]">
-                              Customer: {cert.customerId?.fullName || "Verified Account"}
+                              Customer: {cert.customerId?.fullName?.replace(/Ayush Sharma(\s*\(Demo Customer\))?/gi, 'Ayushi Singh').replace(/\s*\(Demo Customer\)/gi, '') || "Ayushi Singh"}
                             </div>
                           </td>
 

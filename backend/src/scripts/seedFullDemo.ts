@@ -49,7 +49,7 @@ async function seedFullPlatformDemo() {
     const customer = await User.findOneAndUpdate(
       { email: 'customer@retech.in' },
       {
-        fullName: 'Ayush Sharma (Demo Customer)',
+        fullName: 'Ayushi Singh',
         email: 'customer@retech.in',
         phone: '+91 98123 45678',
         passwordHash: custHash,
@@ -360,7 +360,7 @@ async function seedFullPlatformDemo() {
         title: 'Device Registered by Customer',
         description: 'Customer registered MacBook Pro 14 for collection.',
         performedBy: customer._id,
-        performedByName: 'Ayush Sharma',
+        performedByName: 'Ayushi Singh',
         eventTimestamp: new Date(Date.now() - 3600 * 1000 * 96),
         supportingDocuments: [],
       },

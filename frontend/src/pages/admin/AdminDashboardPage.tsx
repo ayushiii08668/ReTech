@@ -310,7 +310,7 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                     <div className="text-[11px] text-[#75665D] mt-0.5">
-                      Customer: {dev.customerId?.fullName || "Unknown"} &middot; {dev.category}
+                      Customer: {dev.customerId?.fullName?.replace(/Ayush Sharma(\s*\(Demo Customer\))?/gi, 'Ayushi Singh').replace(/\s*\(Demo Customer\)/gi, '') || "Ayushi Singh"} &middot; {dev.category}
                     </div>
                   </div>
 

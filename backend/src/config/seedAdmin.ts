@@ -43,7 +43,7 @@ export async function seedAdminUser(): Promise<void> {
       { email: demoCustomerEmail },
       {
         $set: {
-          fullName: 'Ayush Sharma (Demo Customer)',
+          fullName: 'Ayushi Singh',
           email: demoCustomerEmail,
           phone: '+91 98123 45678',
           passwordHash: customerPasswordHash,
