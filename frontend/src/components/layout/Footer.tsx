@@ -65,7 +65,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3 font-dm-sans text-sm text-taupe/80">
               <li>
-                <a href="#schedule" className="hover:text-terracotta-light transition-colors">
+                <a href="/dashboard/submit" className="hover:text-terracotta-light transition-colors">
                   Schedule Pickup
                 </a>
               </li>

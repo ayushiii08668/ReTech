@@ -30,10 +30,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return localStorage.getItem("retech_token")
   })
   const [isLoading, setIsLoading] = useState<boolean>(() => {
-    // If token and user already exist in local cache, do not block or reset session
+    // Only block in loading state if there is an existing token to validate
     const savedToken = localStorage.getItem("retech_token")
-    const savedUser = localStorage.getItem("retech_user")
-    return !savedToken || !savedUser
+    return Boolean(savedToken)
   })
 
   const refreshUser = useCallback(async () => {

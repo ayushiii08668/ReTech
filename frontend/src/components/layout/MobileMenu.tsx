@@ -9,6 +9,7 @@ interface MobileMenuProps {
 
 export default function MobileMenu({ links, onClose }: MobileMenuProps) {
   const { isAuthenticated, isAdmin, logout } = useAuth()
+  const pickupUrl = isAuthenticated ? "/dashboard/submit" : "/login?redirect=/dashboard/submit"
 
   return (
     <motion.div
@@ -98,7 +99,7 @@ export default function MobileMenu({ links, onClose }: MobileMenuProps) {
             </a>
           )}
           <a
-            href="/dashboard/submit"
+            href={pickupUrl}
             onClick={onClose}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-terracotta py-3 font-dm-sans text-sm font-600 text-white transition-all hover:bg-terracotta-dark"
           >

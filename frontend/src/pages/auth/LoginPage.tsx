@@ -18,7 +18,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false)
 
-  const from = (location.state as any)?.from?.pathname || "/dashboard"
+  const redirectParam = new URLSearchParams(location.search).get("redirect")
+  const from = (location.state as any)?.from?.pathname || redirectParam || "/dashboard"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

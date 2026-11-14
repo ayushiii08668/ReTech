@@ -1,5 +1,6 @@
 import { motion } from "framer-motion"
 import { ArrowRight, ChevronDown } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
 
 const fadeInLeft = {
   hidden: { opacity: 0, x: -40 },
@@ -20,6 +21,9 @@ const fadeInRight = {
 }
 
 export default function HeroSection() {
+  const { isAuthenticated } = useAuth()
+  const pickupUrl = isAuthenticated ? "/dashboard/submit" : "/login?redirect=/dashboard/submit"
+
   return (
     <section className="relative min-h-[calc(100vh-80px)] bg-ivory pt-24 pb-16 lg:pb-24">
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-12 px-6 lg:flex-row lg:gap-16 lg:px-8">
@@ -68,7 +72,7 @@ export default function HeroSection() {
             className="mb-8 flex flex-wrap gap-4"
           >
             <a
-              href="#schedule"
+              href={pickupUrl}
               className="group inline-flex items-center gap-2 rounded-lg bg-terracotta px-6 py-3.5 font-dm-sans text-sm font-600 text-white transition-all duration-200 hover:bg-terracotta-dark hover:-translate-y-0.5 hover:shadow-warm-md"
             >
               Schedule a Pickup

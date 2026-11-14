@@ -15,6 +15,7 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const { isAuthenticated, isAdmin, logout } = useAuth()
+  const pickupUrl = isAuthenticated ? "/dashboard/submit" : "/login?redirect=/dashboard/submit"
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 16)
@@ -88,7 +89,7 @@ export default function Navbar() {
               </a>
             )}
             <a
-              href="/dashboard/submit"
+              href={pickupUrl}
               className="inline-flex items-center gap-2 rounded-lg bg-terracotta px-5 py-2.5 font-dm-sans text-sm font-600 text-white transition-all duration-200 hover:bg-terracotta-dark hover:-translate-y-0.5 hover:shadow-warm-md"
             >
               Schedule Pickup
