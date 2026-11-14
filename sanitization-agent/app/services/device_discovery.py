@@ -288,6 +288,31 @@ def discover_host_hardware_json() -> List[DriveInfo]:
                 drives: List[DriveInfo] = []
 
                 for idx, item in enumerate(items):
+                    # ── Format 0: Smartphone / Mobile Storage (Android / iPhone) ──
+                    if item.get("DeviceType") == "SMARTPHONE" or "Smartphone" in item.get("FriendlyName", ""):
+                        model = item.get("FriendlyName") or "Connected Mobile Smartphone"
+                        size = int(item.get("Size") or 128 * (1024 ** 3))
+                        drives.append(
+                            DriveInfo(
+                                driveId=f"MobileDevice{idx}",
+                                model=model,
+                                serialNumber=str(item.get("SerialNumber", f"MOB-USB-{idx:02d}")),
+                                capacityBytes=size,
+                                capacityFormatted=format_bytes(size),
+                                storageType="UFS / NVMe Flash",
+                                interfaceType="USB / MTP",
+                                isSystemDrive=False,
+                                isRemovable=True,
+                                supportedMethods=[
+                                    "NIST_SP_800_88_CLEAR",
+                                    "NIST_SP_800_88_PURGE",
+                                    "ZERO_OVERWRITE",
+                                    "DRY_RUN_SIMULATION",
+                                ],
+                            )
+                        )
+                        continue
+
                     # ── Format 1: Rich WMI (InterfaceType + DriveLetters + IsBoot) ──
                     if "InterfaceType" in item and "DriveLetters" in item:
                         num = item.get("Number", idx)

@@ -1,69 +1,144 @@
-$output = @()
+$disks = @()
 
-# Method 1: Get volume info (always works, no admin needed)
-$drives = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -eq $true }
-foreach ($d in $drives) {
-    $entry = @{
-        Name        = $d.Name
-        DriveType   = [int]$d.DriveType
-        TotalSize   = $d.TotalSize
-        VolumeLabel = $d.VolumeLabel
-        DriveFormat = $d.DriveFormat
-    }
-    $output += $entry
-}
-
-# Method 2: Enrich with WMI disk model (no admin needed for basic query)
+# Method 1: Get physical disk info via WMI
 try {
-    $wmiDisks = Get-WmiObject -Class Win32_LogicalDisk -ErrorAction SilentlyContinue |
-        Select-Object DeviceID, Size, MediaType, Description
-    foreach ($wmi in $wmiDisks) {
-        $letter = $wmi.DeviceID + "\"
-        $match = $output | Where-Object { $_.Name -like "$letter*" }
-        if ($match) {
-            $match.Description = $wmi.Description
-        }
-    }
-
-    # Also try to get physical disk model
     $physDisks = Get-WmiObject -Class Win32_DiskDrive -ErrorAction SilentlyContinue |
         Select-Object Index, Model, SerialNumber, Size, InterfaceType
     $partitions = Get-WmiObject -Class Win32_DiskDriveToDiskPartition -ErrorAction SilentlyContinue
     $logicals   = Get-WmiObject -Class Win32_LogicalDiskToPartition -ErrorAction SilentlyContinue
 
-    $enriched = @()
-    foreach ($phys in $physDisks) {
-        $partLinks = $partitions | Where-Object { $_.Antecedent -like "*Disk #$($phys.Index),*" }
-        $driveLetters = @()
-        foreach ($pl in $partLinks) {
-            $logLink = $logicals | Where-Object { $_.Antecedent -eq $pl.Dependent }
-            foreach ($ll in $logLink) {
-                if ($ll.Dependent -match 'DeviceID="([A-Z]:)"') {
-                    $driveLetters += $matches[1] + "\"
+    if ($physDisks) {
+        foreach ($phys in $physDisks) {
+            $partLinks = $partitions | Where-Object { $_.Antecedent -like "*Disk #$($phys.Index),*" }
+            $driveLetters = @()
+            foreach ($pl in $partLinks) {
+                $logLink = $logicals | Where-Object { $_.Antecedent -eq $pl.Dependent }
+                foreach ($ll in $logLink) {
+                    if ($ll.Dependent -match 'DeviceID="([A-Z]:)"') {
+                        $driveLetters += $matches[1] + "\"
+                    }
                 }
             }
-        }
-        $enriched += @{
-            Number        = $phys.Index
-            FriendlyName  = $phys.Model
-            SerialNumber  = $phys.SerialNumber
-            Size          = $phys.Size
-            InterfaceType = $phys.InterfaceType
-            DriveLetters  = $driveLetters
-            IsBoot        = ($driveLetters -contains "C:\") -or ($phys.Index -eq 0) -or ($physDisks.Count -eq 1)
+            $disks += @{
+                Number        = $phys.Index
+                FriendlyName  = $phys.Model
+                SerialNumber  = $phys.SerialNumber
+                Size          = $phys.Size
+                InterfaceType = $phys.InterfaceType
+                DriveLetters  = $driveLetters
+                IsBoot        = ($driveLetters -contains "C:\") -or ($phys.Index -eq 0) -or ($physDisks.Count -eq 1)
+                DeviceType    = "DISK"
+            }
         }
     }
-    if ($enriched.Count -gt 0) {
-        $enriched | ConvertTo-Json -Compress | Out-File -FilePath host_hardware.json -Encoding utf8
-        Write-Host "[OK] Physical disk info captured via WMI:"
-        $enriched | ForEach-Object { Write-Host "  - $($_.FriendlyName) ($([math]::Round($_.Size/1GB,0)) GB) Boot=$($_.IsBoot)" }
-        exit 0
-    }
-} catch {
-    Write-Host "[INFO] WMI physical disk query failed (non-admin?), falling back to volume info..."
+} catch {}
+
+# Fallback to volume info + registry disk model if WMI physical disks empty
+if ($disks.Count -eq 0) {
+    try {
+        $regModel = ""
+        $regSerial = ""
+        try {
+            $scsi = Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Enum\SCSI' -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.Property -contains 'FriendlyName' } | Select-Object -First 1
+            if ($scsi) {
+                $regModel = (Get-ItemProperty $scsi.PSPath).FriendlyName
+                $regSerial = $scsi.PSChildName
+            }
+        } catch {}
+
+        $volumes = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -eq $true }
+        $vIdx = 0
+        foreach ($v in $volumes) {
+            $isSys = ($v.Name -like "C*")
+            $modelName = if ($isSys -and $regModel) { $regModel } else { "Windows Host Disk ($($v.Name.TrimEnd('\')) [$($v.VolumeLabel)])" }
+            $serial = if ($isSys -and $regSerial) { $regSerial } else { "WIN-HOST-$("{0:D2}" -f $vIdx)" }
+            $iface = if ($modelName -match "NVMe") { "NVMe" } else { "SATA" }
+
+            $disks += @{
+                Number        = $vIdx
+                FriendlyName  = $modelName
+                SerialNumber  = $serial
+                Size          = $v.TotalSize
+                TotalSize     = $v.TotalSize
+                InterfaceType = $iface
+                DriveLetters  = @($v.Name)
+                DriveFormat   = $v.DriveFormat
+                IsBoot        = $isSys
+                DeviceType    = "DISK"
+            }
+            $vIdx++
+        }
+    } catch {}
 }
 
-# Fallback: just write volume info
-$output | ConvertTo-Json -Compress | Out-File -FilePath host_hardware.json -Encoding utf8
-Write-Host "[OK] Volume info captured (fallback mode):"
-$output | ForEach-Object { Write-Host "  - $($_.Name) $([math]::Round($_.TotalSize/1GB,0)) GB [$($_.VolumeLabel)]" }
+# Method 2: Detect connected mobile smartphones (Android / iPhone via USB MTP / USB Enum)
+$mobileIndex = 0
+
+# 2a. Check Shell.Application namespace 17 ("This PC")
+try {
+    $shell = New-Object -ComObject Shell.Application
+    $thisPc = $shell.Namespace(17)
+    foreach ($item in $thisPc.Items()) {
+        $path = [string]$item.Path
+        $name = [string]$item.Name
+        if ($path -notmatch '^[A-Z]:\\?$' -and $name -ne 'Network' -and ($path -match 'usb|wpd|volume|\\\\\?\\' -or $name -match 'realme|samsung|pixel|iphone|redmi|xiaomi|oppo|vivo|oneplus|moto|phone|android')) {
+            $alreadyAdded = $disks | Where-Object { $_.FriendlyName -like "*$name*" }
+            if (-not $alreadyAdded) {
+                $disks += @{
+                    DeviceType    = "SMARTPHONE"
+                    Number        = (10 + $mobileIndex)
+                    FriendlyName  = "$name (Smartphone Storage)"
+                    SerialNumber  = "MOB-USB-0$($mobileIndex + 1)"
+                    Size          = 137438953472
+                    InterfaceType = "USB / MTP"
+                    StorageType   = "UFS / NVMe Flash"
+                    IsBoot        = $false
+                    IsRemovable   = $true
+                }
+                $mobileIndex++
+            }
+        }
+    }
+} catch {}
+
+# 2b. Check active USB Enum in registry (detects phones plugged into USB port with Port & Address assigned)
+try {
+    Get-ChildItem -Path 'HKLM:\SYSTEM\CurrentControlSet\Enum\USB' -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+        $dev = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
+        if ($dev.Address -and $dev.LocationInformation -and ($dev.Service -eq 'WUDFWpdMtp' -or ($dev.CompatibleIDs -join ';') -match 'MTP' -or $dev.Mfg -match 'realme|samsung|apple|google|xiaomi|oppo|vivo|oneplus|motorola|huawei|lenovo' -or $dev.FriendlyName -match 'phone|realme|samsung|redmi|pixel|iphone|moto')) {
+            $rawName = if ($dev.FriendlyName) { $dev.FriendlyName } elseif ($dev.DeviceDesc) { $dev.DeviceDesc } else { "USB Smartphone" }
+            $cleanName = if ($dev.Mfg -and -not ($rawName -like "*$($dev.Mfg)*")) { "$($dev.Mfg) $rawName" } else { $rawName }
+            $serial = if ($dev.PSChildName) { $dev.PSChildName } else { "MOB-USB-0$($mobileIndex + 1)" }
+
+            $alreadyAdded = $disks | Where-Object { $_.FriendlyName -like "*$cleanName*" -or $_.SerialNumber -eq $serial }
+            if (-not $alreadyAdded) {
+                $disks += @{
+                    DeviceType    = "SMARTPHONE"
+                    Number        = (10 + $mobileIndex)
+                    FriendlyName  = "$cleanName (Smartphone Storage)"
+                    SerialNumber  = $serial
+                    Size          = 137438953472
+                    InterfaceType = "USB / MTP"
+                    StorageType   = "UFS / NVMe Flash"
+                    IsBoot        = $false
+                    IsRemovable   = $true
+                }
+                $mobileIndex++
+            }
+        }
+    }
+} catch {}
+
+# Save combined list to host_hardware.json in script directory and current directory
+$targetPath = Join-Path $PSScriptRoot "host_hardware.json"
+$disks | ConvertTo-Json -Compress | Out-File -FilePath $targetPath -Encoding utf8
+$disks | ConvertTo-Json -Compress | Out-File -FilePath "host_hardware.json" -Encoding utf8
+
+Write-Host "[OK] Hardware scan complete:"
+foreach ($d in $disks) {
+    $label = if ($d.FriendlyName) { $d.FriendlyName } else { "$($d.Name) [$($d.VolumeLabel)]" }
+    $sz = if ($d.Size) { [math]::Round($d.Size / 1GB, 0) } else { [math]::Round($d.TotalSize / 1GB, 0) }
+    $boot = if ($d.IsBoot) { " [BOOT/OS]" } else { "" }
+    Write-Host "  - $label ($sz GB)$boot"
+}
