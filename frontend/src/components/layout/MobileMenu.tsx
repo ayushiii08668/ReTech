@@ -1,5 +1,6 @@
 import { motion } from "framer-motion"
-import { X, ArrowRight } from "lucide-react"
+import { X, ArrowRight, LayoutDashboard, LogOut } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
 
 interface MobileMenuProps {
   links: { label: string; href: string }[]
@@ -7,6 +8,8 @@ interface MobileMenuProps {
 }
 
 export default function MobileMenu({ links, onClose }: MobileMenuProps) {
+  const { isAuthenticated, isAdmin, logout } = useAuth()
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -63,13 +66,37 @@ export default function MobileMenu({ links, onClose }: MobileMenuProps) {
 
         {/* Actions */}
         <div className="mt-auto px-6 pb-8">
-          <a
-            href="/login"
-            onClick={onClose}
-            className="mb-3 block w-full rounded-lg border border-taupe/40 py-3 text-center font-dm-sans text-sm font-500 text-warm-brown-body transition-colors hover:border-terracotta hover:text-terracotta"
-          >
-            Login
-          </a>
+          {isAuthenticated ? (
+            <div className="space-y-3 mb-3">
+              <a
+                href={isAdmin ? "/admin/dashboard" : "/dashboard"}
+                onClick={onClose}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-taupe/40 py-2.5 text-center font-dm-sans text-sm font-600 text-warm-brown-body transition-colors hover:border-terracotta hover:text-terracotta"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span>{isAdmin ? "Admin Portal" : "Dashboard"}</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  logout()
+                  onClose()
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50/50 py-2.5 text-center font-dm-sans text-sm font-500 text-rose-700 transition-colors hover:bg-rose-100/60"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+          ) : (
+            <a
+              href="/login"
+              onClick={onClose}
+              className="mb-3 block w-full rounded-lg border border-taupe/40 py-3 text-center font-dm-sans text-sm font-500 text-warm-brown-body transition-colors hover:border-terracotta hover:text-terracotta"
+            >
+              Login
+            </a>
+          )}
           <a
             href="/dashboard/submit"
             onClick={onClose}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Menu, ArrowRight } from "lucide-react"
+import { Menu, ArrowRight, LayoutDashboard, LogOut } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
 import MobileMenu from "./MobileMenu"
 
 const navLinks = [
@@ -13,6 +14,7 @@ const navLinks = [
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { isAuthenticated, isAdmin, logout } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 16)
@@ -59,12 +61,32 @@ export default function Navbar() {
 
           {/* Desktop actions */}
           <div className="hidden items-center gap-4 lg:flex">
-            <a
-              href="/login"
-              className="font-dm-sans text-sm font-500 text-warm-brown-body transition-colors duration-200 hover:text-terracotta"
-            >
-              Login
-            </a>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-4">
+                <a
+                  href={isAdmin ? "/admin/dashboard" : "/dashboard"}
+                  className="inline-flex items-center gap-1.5 font-dm-sans text-sm font-600 text-warm-brown-body transition-colors duration-200 hover:text-terracotta"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>{isAdmin ? "Admin Portal" : "Dashboard"}</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="inline-flex items-center gap-1.5 font-dm-sans text-sm font-500 text-[#75665D] transition-colors duration-200 hover:text-rose-700 cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            ) : (
+              <a
+                href="/login"
+                className="font-dm-sans text-sm font-500 text-warm-brown-body transition-colors duration-200 hover:text-terracotta"
+              >
+                Login
+              </a>
+            )}
             <a
               href="/dashboard/submit"
               className="inline-flex items-center gap-2 rounded-lg bg-terracotta px-5 py-2.5 font-dm-sans text-sm font-600 text-white transition-all duration-200 hover:bg-terracotta-dark hover:-translate-y-0.5 hover:shadow-warm-md"
